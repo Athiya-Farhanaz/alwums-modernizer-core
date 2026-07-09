@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALWUMS — Multi-Agent Web Modernization Orchestrator</title>
+    <meta name="description" content="Premium multi-agent systems modernization control panel. Built by Antigravity.">
+    <link rel="stylesheet" href="index.css?v=3">
+    <!-- JSZip Library for client-side zipping and extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- ==========================================================================
+             SIDEBAR NAVIGATION
+             ========================================================================== -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-icon">A</div>
+                <div class="logo-text">
+                    <h1>ALWUMS</h1>
+                    <p>Legacy Modernization</p>
+                </div>
+            </div>
+            
+            <nav class="nav-list">
+                <div class="nav-item active" data-view="dashboard-view" id="nav-dashboard">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </div>
+                <div class="nav-item" data-view="projects-view" id="nav-projects">
+                    <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Projects
+                </div>
+                <div class="nav-item" data-view="upload-view" id="nav-upload">
+                    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                    New Project
+                </div>
+                <div class="nav-item" data-view="report-view" id="nav-reports">
+                    <svg viewBox="0 0 24 24"><path d="M212 1h16a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h16z"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                    Reports
+                </div>
+                <div class="nav-item" data-view="diff-view" id="nav-diff">
+                    <svg viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6M12 2v20"/></svg>
+                    Diff Viewer
+                </div>
+                <div class="nav-item" data-view="settings-view" id="nav-settings">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Settings
+                </div>
+                <div class="nav-item" data-view="logs-view" id="nav-logs">
+                    <svg viewBox="0 0 24 24"><path d="M12 20h9M3 20h6M3 4h18M3 12h18M3 16h18M3 8h18"/></svg>
+                    Logs
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">AU</div>
+                    <div class="user-details">
+                        <h4>Admin User</h4>
+                        <p>admin@alwums.local</p>
+                    </div>
+                </div>
+                <button class="theme-toggle-btn" id="theme-toggle" title="Switch Theme">
+                    <svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg>
+                </button>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            
+            <!-- ==========================================================================
+                 HEADER
+                 ========================================================================== -->
+            <header class="main-header">
+                <div class="header-title-container">
+                    <h2 id="header-title">Dashboard</h2>
+                </div>
+                <div class="header-right">
+                    <div class="server-status-pill">
+                        <span class="server-status-dot" id="health-dot"></span>
+                        Server State
+                    </div>
+                </div>
+            </header>
+            
+            <!-- ==========================================================================
+                 MAIN VIEWPORT
+                 ========================================================================== -->
+            <div class="view-viewport">
+                
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="dashboard-view" class="page-view active-view">
+                    <div class="dashboard-grid">
+                        <div class="card-panel metric-card">
+                            <span class="metric-card-label">Total Projects</span>
+                            <span class="metric-card-value" id="dashboard-total-count">0</span>
+                            <span class="metric-card-change up">+2 this week</span>
+                        </div>
+                        <div class="card-panel metric-card">
+                            <span class="metric-card-label">Completed</span>
+                            <span class="metric-card-value" id="dashboard-completed-count">0</span>
+                            <span class="metric-card-change up" style="color:var(--color-success)">100% stable</span>
+                        </div>
+                        <div class="card-panel metric-card">
+                            <span class="metric-card-label">In Progress</span>
+                            <span class="metric-card-value" id="dashboard-progress-count">0</span>
+                            <span class="metric-card-change down">Active agents running</span>
+                        </div>
+                        <div class="card-panel metric-card">
+                            <span class="metric-card-label">Success Rate</span>
+                            <span class="metric-card-value">92%</span>
+                            <span class="metric-card-change up">+5%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-panel" style="margin-bottom:24px;">
+                        <div class="card-panel-header">
+                            <h3 class="card-panel-title">Pipeline Overview</h3>
+                        </div>
+                        <div class="pipeline-overview-bar">
+                            <div class="pipeline-step-node completed" id="h-step-1">
+                                <div class="pipeline-step-dot">1</div>
+                                <span class="pipeline-step-name">Analyzer</span>
+                            </div>
+                            <div class="pipeline-step-node completed" id="h-step-2">
+                                <div class="pipeline-step-dot">2</div>
+                                <span class="pipeline-step-name">Planner</span>
+                            </div>
+                            <div class="pipeline-step-node active" id="h-step-3">
+                                <div class="pipeline-step-dot">3</div>
+                                <span class="pipeline-step-name">Generator</span>
+                            </div>
+                            <div class="pipeline-step-node" id="h-step-4">
+                                <div class="pipeline-step-dot">4</div>
+                                <span class="pipeline-step-name">Tester</span>
+                            </div>
+                            <div class="pipeline-step-node" id="h-step-5">
+                                <div class="pipeline-step-dot">5</div>
+                                <span class="pipeline-step-name">Verifier</span>
+                            </div>
+                            <div class="pipeline-step-node" id="h-step-6">
+                                <div class="pipeline-step-dot">6</div>
+                                <span class="pipeline-step-name">Finalizer</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-layout-split">
+                        <div class="card-panel" style="display:flex;flex-direction:column;align-items:center;">
+                            <div class="card-panel-header" style="width:100%;">
+                                <h3 class="card-panel-title">Modernization Time Saved</h3>
+                            </div>
+                            <div class="chart-gauge-container">
+                                <div class="circular-gauge">
+                                    <svg class="circular-gauge-svg" width="140" height="140">
+                                        <circle class="circular-gauge-bg" cx="70" cy="70" r="54" />
+                                        <circle class="circular-gauge-fill" id="time-gauge-fill" cx="70" cy="70" r="54" stroke-dashoffset="96.8" />
+                                    </svg>
+                                    <div class="circular-gauge-text">
+                                        <span class="circular-gauge-percent">78%</span>
+                                        <span class="circular-gauge-label">Faster migration</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-panel">
+                            <div class="card-panel-header">
+                                <h3 class="card-panel-title">Recent Activity</h3>
+                            </div>
+                            <div class="activity-feed-list" id="activity-feed">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 2. PROJECTS LIST VIEW -->
+                <section id="projects-view" class="page-view">
+                    <div class="card-panel">
+                        <div class="filter-actions-bar">
+                            <div class="search-input-wrapper">
+                                <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                                <input type="text" class="form-input" id="project-search-input" placeholder="Search projects...">
+                            </div>
+                            <select class="form-input filter-dropdown" id="project-status-filter">
+                                <option value="all">All Status</option>
+                                <option value="completed">Completed</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                            <button class="btn-primary" id="btn-project-new-upload">
+                                <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                                New Project
+                            </button>
+                        </div>
+                        
+                        <div class="datatable-wrapper">
+                            <table class="datatable">
+                                <thead>
+                                    <tr>
+                                        <th>Project Name</th>
+                                        <th>Technology</th>
+                                        <th>Status</th>
+                                        <th>Progress</th>
+                                        <th>Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="projects-table-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="pagination-wrapper">
+                            <button class="pagination-btn" disabled>&lt;</button>
+                            <button class="pagination-btn active">1</button>
+                            <button class="pagination-btn" disabled>&gt;</button>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 3. UPLOAD / NEW PROJECT VIEW -->
+                <section id="upload-view" class="page-view">
+                    <div class="card-panel">
+                        <div class="wizard-steps-header">
+                            <div class="wizard-step-indicator active" id="wiz-indicator-1">
+                                <div class="wizard-step-number">1</div>
+                                Upload
+                            </div>
+                            <div class="wizard-step-indicator" id="wiz-indicator-2">
+                                <div class="wizard-step-number">2</div>
+                                Configure
+                            </div>
+                            <div class="wizard-step-indicator" id="wiz-indicator-3">
+                                <div class="wizard-step-number">3</div>
+                                Review
+                            </div>
+                        </div>
+                        
+                        <!-- Step 1 Pane: Upload -->
+                        <div class="wizard-step-pane active" id="wiz-pane-1">
+                            <div class="drag-drop-zone" id="drop-area">
+                                <div class="upload-icon-wrapper">
+                                    <svg style="width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                                </div>
+                                <h3>Drop your Classic ASP project here</h3>
+                                <p>or click to select folders from your workspace</p>
+                                <button class="btn-primary" style="pointer-events:none;">Browse Files</button>
+                                <input type="file" id="folder-input" webkitdirectory directory multiple style="display:none;">
+                            </div>
+                            <div id="upload-error-message" style="color:var(--color-danger);font-size:12px;margin-top:10px;display:none;"></div>
+                            <div class="selected-files-list" id="selected-files-card" style="display:none;">
+                                <!-- File rows appended here -->
+                            </div>
+                            <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+                                <button class="btn-primary" id="wizard-next-1" disabled>Configure Project &gt;</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2 Pane: Configure -->
+                        <div class="wizard-step-pane" id="wiz-pane-2">
+                            <div class="wizard-config-grid">
+                                <div class="form-group">
+                                    <label for="config-project-name">Project Name</label>
+                                    <input type="text" class="form-input" id="config-project-name" placeholder="E.g., HR_Portal">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-target-tech">Target Modernization Framework</label>
+                                    <select class="form-input" id="config-target-tech">
+                                        <option value="ASP.NET Core Razor">ASP.NET Core Razor Page (C#)</option>
+                                        <option value="Python Flask">Python Flask & HTML Template</option>
+                                        <option value="Node.js Express">Node Express (JavaScript)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="grid-column: span 2;">
+                                    <label for="config-instructions">Custom Modernization Directives (Optional)</label>
+                                    <textarea class="form-input" id="config-instructions" rows="4" style="resize:vertical;" placeholder="Add custom formatting directives, DB migration target, coding styles, etc..."></textarea>
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-top:20px;">
+                                <button class="btn-secondary" id="wizard-prev-2">&lt; Back</button>
+                                <button class="btn-primary" id="wizard-next-2">Review &gt;</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3 Pane: Review -->
+                        <div class="wizard-step-pane" id="wiz-pane-3">
+                            <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px;">
+                                <div style="display:grid;grid-template-columns:150px 1fr;gap:12px;font-size:13px;border-bottom:1px solid var(--border-color);padding-bottom:12px;">
+                                    <span style="font-weight:600;color:var(--text-secondary);">Project Name:</span>
+                                    <span id="review-project-name" style="color:var(--text-primary);"></span>
+                                    <span style="font-weight:600;color:var(--text-secondary);">Scanned Files:</span>
+                                    <span id="review-files-count" style="color:var(--text-primary);"></span>
+                                    <span style="font-weight:600;color:var(--text-secondary);">Target System:</span>
+                                    <span id="review-target-tech" style="color:var(--text-primary);"></span>
+                                </div>
+                                <div style="font-size:12px;color:var(--text-secondary);background-color:var(--bg-primary);padding:12px;border-radius:var(--radius-sm);line-height:1.5;">
+                                    💡 <strong>Notice:</strong> Running the modernization will execute multi-agent workflows. The Generator agent will utilize your Gemini API Key to modernize files. Depending on project size, this can take up to 60 seconds.
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-top:20px;">
+                                <button class="btn-secondary" id="wizard-prev-3">&lt; Back</button>
+                                <button class="btn-primary" id="btn-run-modernization">
+                                    <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.5" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
+                                    Run Modernization Pipeline
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 4. PIPELINE / AGENT EXECUTION VIEW -->
+                <section id="pipeline-view" class="page-view">
+                    <div class="pipeline-execution-layout">
+                        <div class="card-panel">
+                            <div class="card-panel-header">
+                                <h3 class="card-panel-title">Agent Pipeline Status</h3>
+                            </div>
+                            <div class="agent-pipeline-tree">
+                                <div class="agent-pipeline-item pending" id="a-step-1">
+                                    <div class="agent-pipeline-node">1</div>
+                                    <div class="agent-pipeline-details">
+                                        <h5>Analyzer</h5>
+                                        <span class="agent-pipeline-time">Stage details</span>
+                                    </div>
+                                </div>
+                                <div class="agent-pipeline-item pending" id="a-step-2">
+                                    <div class="agent-pipeline-node">2</div>
+                                    <div class="agent-pipeline-details">
+                                        <h5>Planner</h5>
+                                        <span class="agent-pipeline-time">Stage details</span>
+                                    </div>
+                                </div>
+                                <div class="agent-pipeline-item pending" id="a-step-3">
+                                    <div class="agent-pipeline-node">3</div>
+                                    <div class="agent-pipeline-details">
+                                        <h5>Generator</h5>
+                                        <span class="agent-pipeline-time">Stage details</span>
+                                    </div>
+                                </div>
+                                <div class="agent-pipeline-item pending" id="a-step-4">
+                                    <div class="agent-pipeline-node">4</div>
+                                    <div class="agent-pipeline-details">
+                                        <h5>Tester</h5>
+                                        <span class="agent-pipeline-time">Stage details</span>
+                                    </div>
+                                </div>
+                                <div class="agent-pipeline-item pending" id="a-step-5">
+                                    <div class="agent-pipeline-node">5</div>
+                                    <div class="agent-pipeline-details">
+                                        <h5>Verifier</h5>
+                                        <span class="agent-pipeline-time">Stage details</span>
+                                    </div>
+                                </div>
+                                <div class="agent-pipeline-item pending" id="a-step-6">
+                                    <div class="agent-pipeline-node">6</div>
+                                    <div class="agent-pipeline-details">
+                                        <h5>Finalizer</h5>
+                                        <span class="agent-pipeline-time">Stage details</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex;flex-direction:column;gap:20px;">
+                            <div class="card-panel">
+                                <div class="card-panel-header">
+                                    <h3 class="card-panel-title">Execution Details</h3>
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;margin-bottom:16px;">
+                                    <div>
+                                        <span style="font-weight:600;color:var(--text-secondary);">Current Action:</span>
+                                        <span id="execution-stage-name" style="color:var(--accent);font-weight:600;">Queueing...</span>
+                                    </div>
+                                    <div class="progress-bar-bg" style="margin-top:4px;">
+                                        <div class="progress-bar-fill" id="execution-progress-bar"></div>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);">
+                                        <span>Elapsed Time: <span id="execution-elapsed-time">00:00</span></span>
+                                        <span>Progress: <span id="execution-progress-pct">0%</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card-panel">
+                                <div class="card-panel-header">
+                                    <h3 class="card-panel-title">Live Log Console</h3>
+                                </div>
+                                <div class="console-window" id="console-log">
+                                    <!-- Console output loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 5. ANALYZER REPORT VIEW -->
+                <section id="report-view" class="page-view">
+                    <div class="card-panel">
+                        <div class="analyzer-tabs-header">
+                            <button class="analyzer-tab-btn active" data-tab="overview">Overview</button>
+                            <button class="analyzer-tab-btn" data-tab="structure">Structure</button>
+                            <button class="analyzer-tab-btn" data-tab="dependencies">Dependencies</button>
+                            <button class="analyzer-tab-btn" data-tab="antipatterns">Anti-Patterns</button>
+                            <button class="analyzer-tab-btn" data-tab="summary">Summary</button>
+                        </div>
+                        
+                        <!-- TAB Overview -->
+                        <div class="analyzer-tab-content active" id="analyzer-tab-overview">
+                            <div style="display:grid;grid-template-columns:1fr 2fr;gap:24px;">
+                                <div style="display:flex;flex-direction:column;gap:20px;">
+                                    <div class="card-panel metric-card" style="box-shadow:none;border-color:var(--border-color);">
+                                        <span class="metric-card-label">Total Scanned Files</span>
+                                        <span class="metric-card-value" id="report-total-files">0</span>
+                                    </div>
+                                    <div class="card-panel metric-card" style="box-shadow:none;border-color:var(--border-color);">
+                                        <span class="metric-card-label">Legacy Target Files</span>
+                                        <span class="metric-card-value" id="report-legacy-files">0</span>
+                                    </div>
+                                    <div class="card-panel" style="box-shadow:none;border-color:var(--border-color);">
+                                        <span class="metric-card-label">Complexity Score</span>
+                                        <div class="score-range-bar-wrapper">
+                                            <span class="score-value-text" id="report-complexity">N/A</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-panel" style="box-shadow:none;border-color:var(--border-color);">
+                                    <h4 style="font-family:var(--font-heading);font-size:14px;margin-bottom:12px;">Technology Stack</h4>
+                                    <div id="tech-stack-chart-container">
+                                        <!-- Stack charts -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- TAB Structure -->
+                        <div class="analyzer-tab-content" id="analyzer-tab-structure">
+                            <div class="selected-files-list" id="report-files-list" style="max-height:300px;border-color:var(--border-color);">
+                                <!-- File lists populated -->
+                            </div>
+                        </div>
+                        
+                        <!-- TAB Dependencies -->
+                        <div class="analyzer-tab-content" id="analyzer-tab-dependencies">
+                            <div class="datatable-wrapper">
+                                <table class="datatable">
+                                    <thead>
+                                        <tr>
+                                            <th>Source File</th>
+                                            <th>Imports / Include Target</th>
+                                            <th>Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="report-dependencies-tbody">
+                                        <tr><td colspan="3" style="text-align:center;">No dependencies scanned yet</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- TAB AntiPatterns -->
+                        <div class="analyzer-tab-content" id="analyzer-tab-antipatterns">
+                            <div class="activity-feed-list" id="report-antipatterns-list">
+                                <!-- Anti patterns rows -->
+                            </div>
+                        </div>
+                        
+                        <!-- TAB Summary -->
+                        <div class="analyzer-tab-content" id="analyzer-tab-summary">
+                            <div style="font-size:13px;line-height:1.6;color:var(--text-secondary);" id="report-summary-text">
+                                No summary generated yet.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 6. CODE DIFF VIEW VIEW -->
+                <section id="diff-view" class="page-view">
+                    <div class="card-panel">
+                        <div class="diff-header-bar">
+                            <div>
+                                <h3 class="card-panel-title">Code Modernization Comparison</h3>
+                            </div>
+                            <div>
+                                <select class="form-input" id="file-selector" style="width:250px;">
+                                    <option value="">No files available</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="diff-container">
+                            <div class="diff-panel">
+                                <div class="diff-panel-title">
+                                    <span id="original-title">Original Code</span>
+                                </div>
+                                <div class="diff-code-window" id="original-code">
+                                    <!-- Original rows -->
+                                </div>
+                            </div>
+                            <div class="diff-panel">
+                                <div class="diff-panel-title">
+                                    <span id="upgraded-title">Modernized Code</span>
+                                </div>
+                                <div class="diff-code-window" id="upgraded-code">
+                                    <!-- Upgraded rows -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 7. FINAL OUTPUT & DOWNLOAD VIEW -->
+                <section id="download-view" class="page-view">
+                    <div class="dashboard-layout-split" style="grid-template-columns:3fr 2fr;">
+                        <div class="card-panel">
+                            <div class="card-panel-header">
+                                <h3 class="card-panel-title">Modernization Summary</h3>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+                                <div class="card-panel metric-card" style="box-shadow:none;border-color:var(--border-color);">
+                                    <span class="metric-card-label">Files Converted</span>
+                                    <span class="metric-card-value" id="download-files-converted">0/0</span>
+                                </div>
+                                <div class="card-panel metric-card" style="box-shadow:none;border-color:var(--border-color);">
+                                    <span class="metric-card-label">Actual Pipeline Time</span>
+                                    <span class="metric-card-value" id="download-pipeline-time">0s</span>
+                                </div>
+                            </div>
+                            <h4 style="font-family:var(--font-heading);font-size:14px;margin-bottom:12px;">Successful Artifact Checks</h4>
+                            <div class="activity-feed-list" style="gap:8px;">
+                                <div class="selected-file-row">
+                                    <span>All syntax checks validated</span>
+                                    <span class="status-pill completed">Pass</span>
+                                </div>
+                                <div class="selected-file-row">
+                                    <span>Anti-patterns migrated successfully</span>
+                                    <span class="status-pill completed">Pass</span>
+                                </div>
+                                <div class="selected-file-row">
+                                    <span>Self-test verification validation complete</span>
+                                    <span class="status-pill completed">Pass</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-panel" style="display:flex;flex-direction:column;justify-content:space-between;">
+                            <div>
+                                <div class="card-panel-header">
+                                    <h3 class="card-panel-title">Download Package</h3>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:12px;background-color:var(--bg-primary);padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);margin-bottom:20px;">
+                                    <svg style="width:28px;height:28px;color:var(--accent);" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                    <div>
+                                        <h5 style="font-size:13px;font-weight:600;" id="download-zip-name">modernized_project.zip</h5>
+                                        <p style="font-size:10px;color:var(--text-muted);" id="download-zip-size">Computing size...</p>
+                                    </div>
+                                </div>
+                                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+                                    Contains:
+                                    <ul style="padding-left:16px;margin-top:6px;display:flex;flex-direction:column;gap:4px;">
+                                        <li>Modernized source templates</li>
+                                        <li>Extracted dedicated styling sheets</li>
+                                        <li>Full offline analysis report</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">
+                                <button class="btn-primary" id="download-zip-btn" style="width:100%;justify-content:center;">
+                                    Download Upgraded Zip
+                                </button>
+                                <button class="btn-secondary" id="download-preview-btn" style="width:100%;justify-content:center;">
+                                    Preview Upgraded Output
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 8. SETTINGS VIEW -->
+                <section id="settings-view" class="page-view">
+                    <div class="card-panel">
+                        <div class="settings-split-pane">
+                            <div class="settings-menu">
+                                <div class="settings-menu-item active" data-pane="llm">LLM Configuration</div>
+                                <div class="settings-menu-item" data-pane="paths">Paths & Workspace</div>
+                                <div class="settings-menu-item" data-pane="advanced">Advanced Configuration</div>
+                            </div>
+                            
+                            <div class="settings-content-pane active" id="settings-pane-llm">
+                                <div class="settings-form-layout">
+                                    <div class="form-group">
+                                        <label for="model-provider">LLM Provider</label>
+                                        <select class="form-input" id="model-provider">
+                                            <option value="gemini">Google Gemini API</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="model-select">Model Version</label>
+                                        <select class="form-input" id="model-select">
+                                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Stable, Recommended)</option>
+                                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="api-key-input">API Credentials Key</label>
+                                        <input type="password" class="form-input" id="api-key-input" placeholder="AQ.Ab8RN...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="temp-slider">Temperature</label>
+                                        <div class="slider-container">
+                                            <input type="range" class="form-input" id="temp-slider" min="0" max="1" step="0.1" value="0.0" style="padding:0;">
+                                            <span class="slider-readout" id="temp-value">0.0</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="max-tokens">Max Tokens Limit</label>
+                                        <input type="number" class="form-input" id="max-tokens" value="8192">
+                                    </div>
+                                    <div>
+                                        <button class="btn-primary" id="save-settings">Save Settings</button>
+                                        <span id="settings-status" style="margin-left:12px;font-size:12px;font-weight:600;color:var(--color-success);display:none;">Saved!</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="settings-content-pane" id="settings-pane-paths">
+                                <div class="settings-form-layout">
+                                    <div class="form-group">
+                                        <label for="settings-agent-dir">Agents Directory path</label>
+                                        <input type="text" class="form-input" id="settings-agent-dir" value="alwums/agents" disabled>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="settings-cache-file">Checkpoints Cache file path</label>
+                                        <input type="text" class="form-input" id="settings-cache-file" value="alwums/checkpoints/llm_cache.json" disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="settings-content-pane" id="settings-pane-advanced">
+                                <div class="settings-form-layout">
+                                    <div class="form-group">
+                                        <label for="settings-validator-retries">Validator self-test retries</label>
+                                        <input type="number" class="form-input" id="settings-validator-retries" value="3" disabled>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 9. LOGS VIEW -->
+                <section id="logs-view" class="page-view">
+                    <div class="card-panel">
+                        <div class="filter-actions-bar">
+                            <select class="form-input filter-dropdown" id="log-agent-filter" style="width:180px;">
+                                <option value="all">All Agents</option>
+                                <option value="system">System</option>
+                                <option value="analyzer">Analyzer</option>
+                                <option value="planner">Planner</option>
+                                <option value="generator">Generator</option>
+                                <option value="tester">Tester</option>
+                                <option value="verifier">Verifier</option>
+                                <option value="finalizer">Finalizer</option>
+                            </select>
+                            <select class="form-input filter-dropdown" id="log-level-filter" style="width:140px;">
+                                <option value="all">All Levels</option>
+                                <option value="info">INFO</option>
+                                <option value="success">SUCCESS</option>
+                                <option value="warning">WARNING</option>
+                                <option value="error">ERROR</option>
+                            </select>
+                            <div class="search-input-wrapper">
+                                <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                                <input type="text" class="form-input" id="log-search-input" placeholder="Search logs database...">
+                            </div>
+                        </div>
+                        
+                        <div class="datatable-wrapper">
+                            <table class="datatable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:120px;">Time</th>
+                                        <th style="width:120px;">Agent</th>
+                                        <th style="width:120px;">Level</th>
+                                        <th>Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-table-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="pagination-wrapper">
+                            <button class="pagination-btn" id="btn-logs-prev" disabled>&lt;</button>
+                            <button class="pagination-btn active" id="btn-logs-page">1</button>
+                            <button class="pagination-btn" id="btn-logs-next" disabled>&gt;</button>
+                        </div>
+                    </div>
+                </section>
+                
+            </div>
+        </main>
+    </div>
+    
+    <script src="index.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment variables
+.env
+
+# Flask & Application runtime data
+alwums/uploads/
+alwums/checkpoints/
+!alwums/checkpoints/progress.json
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
