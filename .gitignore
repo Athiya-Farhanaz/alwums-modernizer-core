@@ -13,10 +13,9 @@ pip-delete-this-directory.txt
 # Environment variables
 .env
 
-# Flask & Application runtime data
-alwums/uploads/
-alwums/checkpoints/
-!alwums/checkpoints/progress.json
+uploads/
+checkpoints/
+!checkpoints/progress.json
 *.zip
 
 # OS files

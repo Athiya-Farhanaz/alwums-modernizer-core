@@ -22,7 +22,7 @@ import threading
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (resolved absolute path)
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 # ---------- CONFIG ----------
 # Load API Keys from GEMINI_API_KEY env variable, fallback to original hardcoded key if not specified
