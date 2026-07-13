@@ -14,7 +14,7 @@ ALWUMS is a codebase modernization platform that migrates legacy systems (Classi
 ![Dashboard](screenshots/dashboard.png)
  
 **Full Workflow — Upload, Pipeline, Diff Viewer, Reports, Logs**
-![Full Workflow](screenshots/full-flow.png)
+![Full Workflow](screenshots/full-flow.jpg)
  
 ---
  
