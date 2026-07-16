@@ -34,19 +34,19 @@ ALWUMS is a codebase modernization platform that migrates legacy systems (Classi
  
 | # | Agent | Responsibility |
 |---|-------|-----------------|
-| 1 | **Analyzer** | Scans files, detects tech stack, maps dependencies |
-| 2 | **Planner** | Builds refactoring checklist, flags deprecations/security risks |
-| 3 | **Generator** | Refactors legacy code into the target stack |
-| 4 | **Tester** | Runs syntax and basic runtime checks |
-| 5 | **Verifier** | Checks styling extraction, encoding, and content integrity |
-| 6 | **Finalizer** | Repairs failures, packages output + HTML migration report |
+| 1 | **Discovery Agent** | Scans files, detects tech stack, maps dependencies |
+| 2 | **Manager Agent** | Builds refactoring checklist, flags deprecations/security risks |
+| 3 | **Prompt Maker Agent** | Builds context-aware prompts with migration requirements |
+| 4 | **Execution Agent** | Refactors legacy code into the target stack using LLMs |
+| 5 | **Validator Agent** | Confirms every planned task has been completed |
+| 6 | **Finalizer Agent** | Creates runtime test environment, builds, executes, and repairs failures |
  
 ---
  
 ## Tech Stack
  
 **Core:** Agentic AI orchestration, Google Gemini API (`gemini-2.5-flash`)
-**Backend:** Python, Flask
+**Backend:** Python, FastAPI
 **Frontend:** HTML5, Vanilla CSS3, Vanilla JS (JSZip, AJAX)
 **Data:** MongoDB (migration target), JSON-based agent communication
  
@@ -61,7 +61,7 @@ alwums-modernizer-core/
 ├── agents/                   # Agent prompt definitions
 ├── project/                  # Sample legacy project
 ├── index.html / .css / .js   # Dashboard UI
-├── universal_upgrader.py     # Flask orchestrator entry point
+├── universal_upgrader.py     # FastAPI orchestrator entry point
 ├── uni.py
 ├── requirements.txt
 └── .env.example

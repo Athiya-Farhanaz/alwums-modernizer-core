@@ -14,8 +14,11 @@ import requests
 import re
 import hashlib
 from datetime import datetime
-from flask import Flask, request, jsonify, send_file, abort, make_response
+from fastapi import FastAPI, Request, Response, UploadFile, File, HTTPException
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from werkzeug.utils import secure_filename
+import uvicorn
 import zipfile
 import tempfile
 import threading
@@ -49,8 +52,15 @@ os.makedirs(AGENT_DIR, exist_ok=True)  # Ensure agents dir exists
 
 ALLOWED_EXTENSIONS = {'zip'}  # Only allow zip uploads
 
-app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB max upload size
+app = FastAPI(title="ALWUMS Modernizer Core API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------- SIMPLE CACHE ----------
 try:
@@ -387,20 +397,14 @@ def create_output_zip(output_dir, report_path):
     os.remove(zip_path)
     return zip_bytes
 
-# ---------- Flask Routes ----------
+# ---------- FastAPI Routes ----------
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/upgrade', methods=['POST', 'OPTIONS'])
-def upgrade_project():
-    if request.method == 'OPTIONS':
-        return _build_cors_response("")
-    
-    if 'project' not in request.files:
-        return _cors_jsonify({"error": "No project file uploaded"}), 400
-    file = request.files['project']
-    if file.filename == '' or not allowed_file(file.filename):
-        return _cors_jsonify({"error": "Invalid file, must be a .zip"}), 400
+@app.post('/upgrade')
+async def upgrade_project(project: UploadFile = File(...)):
+    if not allowed_file(project.filename):
+        raise HTTPException(status_code=400, detail="Invalid file, must be a .zip")
 
     # Create temp dirs for this run
     with tempfile.TemporaryDirectory() as temp_base:
@@ -412,8 +416,10 @@ def upgrade_project():
         os.makedirs(report_dir, exist_ok=True)
 
         # Save and extract zip
-        zip_path = os.path.join(temp_base, secure_filename(file.filename))
-        file.save(zip_path)
+        zip_path = os.path.join(temp_base, secure_filename(project.filename))
+        with open(zip_path, "wb") as buffer:
+            shutil.copyfileobj(project.file, buffer)
+
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(input_dir)
 
@@ -422,49 +428,45 @@ def upgrade_project():
             report_path = run_upgrade_pipeline(input_dir, output_dir, report_dir)
             zip_bytes = create_output_zip(output_dir, report_path)
             
-            response = make_response(zip_bytes)
-            response.headers['Content-Type'] = 'application/zip'
-            response.headers['Content-Disposition'] = 'attachment; filename=upgraded_project.zip'
-            return _build_cors_response(response)
+            return Response(
+                content=zip_bytes,
+                media_type="application/zip",
+                headers={
+                    "Content-Disposition": "attachment; filename=upgraded_project.zip"
+                }
+            )
         except Exception as e:
-            return _cors_jsonify({"error": str(e)}), 500
+            raise HTTPException(status_code=500, detail=str(e))
 
-@app.route('/')
-def index():
+@app.get('/', response_class=HTMLResponse)
+async def index():
     try:
         with open(os.path.join(BASE_DIR, "index.html"), "r", encoding="utf-8") as f:
-            return f.read(), 200, {'Content-Type': 'text/html; charset=utf-8'}
+            return HTMLResponse(content=f.read(), status_code=200)
     except Exception as e:
-        return f"Failed to load index.html: {str(e)}", 404
+        raise HTTPException(status_code=404, detail=f"Failed to load index.html: {str(e)}")
 
-@app.route('/index.css')
-def serve_css():
+@app.get('/index.css')
+async def serve_css():
     try:
-        with open(os.path.join(BASE_DIR, "index.css"), "r", encoding="utf-8") as f:
-            return f.read(), 200, {'Content-Type': 'text/css; charset=utf-8'}
+        return FileResponse(os.path.join(BASE_DIR, "index.css"), media_type="text/css")
     except Exception as e:
-        return f"Failed to load index.css: {str(e)}", 404
+        raise HTTPException(status_code=404, detail=f"Failed to load index.css: {str(e)}")
 
-@app.route('/index.js')
-def serve_js():
+@app.get('/index.js')
+async def serve_js():
     try:
-        with open(os.path.join(BASE_DIR, "index.js"), "r", encoding="utf-8") as f:
-            return f.read(), 200, {'Content-Type': 'application/javascript; charset=utf-8'}
+        return FileResponse(os.path.join(BASE_DIR, "index.js"), media_type="application/javascript")
     except Exception as e:
-        return f"Failed to load index.js: {str(e)}", 404
+        raise HTTPException(status_code=404, detail=f"Failed to load index.js: {str(e)}")
 
-@app.route('/health', methods=['GET', 'OPTIONS'])
-def health():
-    if request.method == 'OPTIONS':
-        return _build_cors_response("")
-    response = jsonify({"status": "ok"})
-    return _build_cors_response(response), 200
+@app.get('/health')
+async def health():
+    return {"status": "ok"}
 
-@app.route('/debug', methods=['GET', 'OPTIONS'])
-def debug():
-    if request.method == 'OPTIONS':
-        return _build_cors_response("")
-    response = jsonify({
+@app.get('/debug')
+async def debug():
+    return {
         "api_keys_count": len(API_KEYS),
         "api_keys_preview": [k[:6] + "..." for k in API_KEYS] if API_KEYS else [],
         "cache_file_path": CACHE_FILE,
@@ -472,26 +474,9 @@ def debug():
         "cache_keys": list(_LLM_CACHE.keys()),
         "base_dir": BASE_DIR,
         "gemini_env_key": os.environ.get("GEMINI_API_KEY", "")[:6] + "..." if os.environ.get("GEMINI_API_KEY") else "None"
-    })
-    return _build_cors_response(response), 200
-
-# CORS Helpers
-def _build_cors_response(response_or_str):
-    if isinstance(response_or_str, str):
-        response = make_response(response_or_str)
-    else:
-        response = response_or_str
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-    response.headers['Access-Control-Max-Age'] = '3600'
-    return response
-
-def _cors_jsonify(*args, **kwargs):
-    response = jsonify(*args, **kwargs)
-    return _build_cors_response(response)
+    }
 
 if __name__ == "__main__":
-    print("Starting Flask server. Ensure agent templates are in 'agents/' and API_KEYS are set.")
+    print("Starting FastAPI server. Ensure agent templates are in 'agents/' and API_KEYS are set.")
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    uvicorn.run("universal_upgrader:app", host="0.0.0.0", port=port, reload=False)

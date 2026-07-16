@@ -16,12 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: 'Legacy_Reports', tech: 'Classic ASP', status: 'completed', progress: 100, updated: '1 day ago' }
         ],
         logs: [
-            { time: '10:31:15', agent: 'Generator', level: 'info', message: 'Generated products.py successfully' },
-            { time: '10:31:10', agent: 'Generator', level: 'info', message: 'Generating templates/products.html ...' },
-            { time: '10:30:58', agent: 'Generator', level: 'info', message: 'Generating models.py ...' },
-            { time: '10:30:46', agent: 'Planner', level: 'info', message: 'Plan created successfully' },
-            { time: '10:30:45', agent: 'Analyzer', level: 'info', message: 'Analysis completed. 142 files scanned' },
-            { time: '10:30:12', agent: 'Analyzer', level: 'info', message: 'Starting code analysis...' }
+            { time: '10:31:15', agent: 'Prompt Maker Agent', level: 'info', message: 'Generated products.py successfully' },
+            { time: '10:31:10', agent: 'Prompt Maker Agent', level: 'info', message: 'Generating templates/products.html ...' },
+            { time: '10:30:58', agent: 'Prompt Maker Agent', level: 'info', message: 'Generating models.py ...' },
+            { time: '10:30:46', agent: 'Manager Agent', level: 'info', message: 'Plan created successfully' },
+            { time: '10:30:45', agent: 'Discovery Agent', level: 'info', message: 'Analysis completed. 142 files scanned' },
+            { time: '10:30:12', agent: 'Discovery Agent', level: 'info', message: 'Starting code analysis...' }
         ],
         originalFiles: {},  // path -> content
         upgradedFiles: {},  // path -> content
@@ -636,12 +636,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function simulatePipelineWorkflow() {
         const stages = [
-            { step: 'Analyzer', id: 'a-step-1', hId: 'h-step-1', time: 1000, startMsg: 'Initiating dependency tree scan ...', endMsg: 'Project analysis complete. Found files.' },
-            { step: 'Planner', id: 'a-step-2', hId: 'h-step-2', time: 3000, startMsg: 'Synthesizing conversion checklist ...', endMsg: 'Modernization plan locked.' },
-            { step: 'Generator', id: 'a-step-3', hId: 'h-step-3', time: 6000, startMsg: 'Refactoring Classic ASP VBScript blocks...', endMsg: 'Conversion models compiled.' },
-            { step: 'Tester', id: 'a-step-4', hId: 'h-step-4', time: 10000, startMsg: 'Performing self-test compiler validation checks ...', endMsg: 'Checks passed.' },
-            { step: 'Verifier', id: 'a-step-5', hId: 'h-step-5', time: 13000, startMsg: 'Verifying styling layouts and CSS extractions...', endMsg: 'Verification complete.' },
-            { step: 'Finalizer', id: 'a-step-6', hId: 'h-step-6', time: 16000, startMsg: 'Assembling directory assets ...', endMsg: 'Packaging upgrade zip.' }
+            { step: 'Discovery Agent', id: 'a-step-1', hId: 'h-step-1', time: 1000, startMsg: 'Initiating dependency tree scan ...', endMsg: 'Project analysis complete. Found files.' },
+            { step: 'Manager Agent', id: 'a-step-2', hId: 'h-step-2', time: 3000, startMsg: 'Synthesizing conversion checklist ...', endMsg: 'Modernization plan locked.' },
+            { step: 'Prompt Maker Agent', id: 'a-step-3', hId: 'h-step-3', time: 6000, startMsg: 'Refactoring Classic ASP VBScript blocks...', endMsg: 'Conversion models compiled.' },
+            { step: 'Execution Agent', id: 'a-step-4', hId: 'h-step-4', time: 10000, startMsg: 'Performing self-test compiler validation checks ...', endMsg: 'Checks passed.' },
+            { step: 'Validator Agent', id: 'a-step-5', hId: 'h-step-5', time: 13000, startMsg: 'Verifying styling layouts and CSS extractions...', endMsg: 'Verification complete.' },
+            { step: 'Finalizer Agent', id: 'a-step-6', hId: 'h-step-6', time: 16000, startMsg: 'Assembling directory assets ...', endMsg: 'Packaging upgrade zip.' }
         ];
 
         stages.forEach(s => {
