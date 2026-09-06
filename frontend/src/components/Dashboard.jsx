@@ -9,8 +9,8 @@ export default function Dashboard({ onNavigate, projects = [] }) {
   const pipelineAgents = [
     {
       num: 1,
-      name: 'Analyzer',
-      sub: 'Code Analysis',
+      name: 'Discovery Agent',
+      sub: 'Code Discovery',
       icon: (
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#4f46e5" strokeWidth="2">
           <circle cx="11" cy="11" r="8"/>
@@ -21,8 +21,8 @@ export default function Dashboard({ onNavigate, projects = [] }) {
     },
     {
       num: 2,
-      name: 'Planner',
-      sub: 'Strategy Planning',
+      name: 'Manager Agent',
+      sub: 'Task Planning',
       icon: (
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#4f46e5" strokeWidth="2">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -34,8 +34,8 @@ export default function Dashboard({ onNavigate, projects = [] }) {
     },
     {
       num: 3,
-      name: 'Generator',
-      sub: 'Code Generation',
+      name: 'Prompt Maker Agent',
+      sub: 'Context Synthesis',
       icon: (
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#4f46e5" strokeWidth="2">
           <polyline points="16 18 22 12 16 6"/>
@@ -45,18 +45,17 @@ export default function Dashboard({ onNavigate, projects = [] }) {
     },
     {
       num: 4,
-      name: 'Tester',
-      sub: 'Quality Testing',
+      name: 'Execution Agent',
+      sub: 'Code Generation',
       icon: (
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#4f46e5" strokeWidth="2">
-          <path d="M10 2v7.31L4 18a2 2 0 0 0 1.66 3h12.68A2 2 0 0 0 20 18l-6-8.69V2"/>
-          <path d="M8.5 2h7"/>
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
         </svg>
       )
     },
     {
       num: 5,
-      name: 'Verifier',
+      name: 'Validator Agent',
       sub: 'Verification & Review',
       icon: (
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#4f46e5" strokeWidth="2">
@@ -67,7 +66,7 @@ export default function Dashboard({ onNavigate, projects = [] }) {
     },
     {
       num: 6,
-      name: 'Finalizer',
+      name: 'Finalizer Agent',
       sub: 'Packaging & Delivery',
       icon: (
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#4f46e5" strokeWidth="2">
@@ -234,7 +233,7 @@ export default function Dashboard({ onNavigate, projects = [] }) {
               flexDirection: 'column',
               alignItems: 'center',
               zIndex: 2,
-              width: '120px',
+              width: '140px',
               textAlign: 'center'
             }}>
               {/* Circular Icon Node */}
@@ -270,7 +269,7 @@ export default function Dashboard({ onNavigate, projects = [] }) {
                 {ag.num}
               </div>
 
-              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px', lineHeight: 1.2 }}>
                 {ag.name}
               </span>
               <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>

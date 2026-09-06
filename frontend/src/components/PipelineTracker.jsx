@@ -17,12 +17,12 @@ export default function PipelineTracker({
   }, [logs]);
 
   const agents = [
-    { num: 1, name: 'Analyzer', desc: 'Code Analysis', defaultTime: '00:01:45' },
-    { num: 2, name: 'Planner', desc: 'Strategy Planning', defaultTime: '00:01:12' },
-    { num: 3, name: 'Generator', desc: 'Code Generation', defaultTime: '00:02:34' },
-    { num: 4, name: 'Tester', desc: 'Quality Testing', defaultTime: '--:--:--' },
-    { num: 5, name: 'Verifier', desc: 'Verification & Review', defaultTime: '--:--:--' },
-    { num: 6, name: 'Finalizer', desc: 'Packaging & Delivery', defaultTime: '--:--:--' }
+    { num: 1, name: 'Discovery Agent', desc: 'Code Discovery & Scanning', defaultTime: '00:01:45' },
+    { num: 2, name: 'Manager Agent', desc: 'Task Planning & Checklist', defaultTime: '00:01:12' },
+    { num: 3, name: 'Prompt Maker Agent', desc: 'Context-Aware Prompt Synthesis', defaultTime: '00:00:54' },
+    { num: 4, name: 'Execution Agent', desc: 'Autonomous Code Generation', defaultTime: '00:02:34' },
+    { num: 5, name: 'Validator Agent', desc: 'Verification & Feedback Loop', defaultTime: '--:--:--' },
+    { num: 6, name: 'Finalizer Agent', desc: 'Compiler Testing & Packaging', defaultTime: '--:--:--' }
   ];
 
   const currentAgent = agents[Math.min(currentStage - 1, 5)];
@@ -218,7 +218,7 @@ export default function PipelineTracker({
                 logs.map((log, i) => (
                   <div key={i} style={{ marginBottom: '4px' }}>
                     <span style={{ color: '#64748b' }}>[{log.time || '10:30:45'}]</span>{' '}
-                    <span style={{ color: '#38bdf8' }}>{log.agent || 'Generator'}:</span>{' '}
+                    <span style={{ color: '#38bdf8' }}>{log.agent || 'Execution Agent'}:</span>{' '}
                     <span style={{ color: log.level === 'error' ? '#f87171' : log.level === 'success' ? '#4ade80' : '#e2e8f0' }}>
                       {log.message}
                     </span>
@@ -226,12 +226,12 @@ export default function PipelineTracker({
                 ))
               ) : (
                 <>
-                  <div><span style={{ color: '#64748b' }}>[10:30:45]</span> <span style={{ color: '#38bdf8' }}>Generator:</span> Generator started</div>
-                  <div><span style={{ color: '#64748b' }}>[10:30:46]</span> <span style={{ color: '#38bdf8' }}>Generator:</span> Reading task decomposition plan... Done</div>
-                  <div><span style={{ color: '#64748b' }}>[10:30:48]</span> <span style={{ color: '#38bdf8' }}>Generator:</span> Generating routes.py ...</div>
-                  <div><span style={{ color: '#64748b' }}>[10:30:58]</span> <span style={{ color: '#38bdf8' }}>Generator:</span> Generating models.py ...</div>
-                  <div><span style={{ color: '#64748b' }}>[10:31:10]</span> <span style={{ color: '#38bdf8' }}>Generator:</span> Generating templates/products.html ...</div>
-                  <div><span style={{ color: '#64748b' }}>[10:31:15]</span> <span style={{ color: '#4ade80' }}>Generator:</span> Code generation progress: 60%</div>
+                  <div><span style={{ color: '#64748b' }}>[10:30:12]</span> <span style={{ color: '#38bdf8' }}>Discovery Agent:</span> Codebase scanning complete. 142 files correlated.</div>
+                  <div><span style={{ color: '#64748b' }}>[10:30:46]</span> <span style={{ color: '#38bdf8' }}>Manager Agent:</span> Task checklist and dependency graph built.</div>
+                  <div><span style={{ color: '#64748b' }}>[10:30:58]</span> <span style={{ color: '#38bdf8' }}>Prompt Maker Agent:</span> Context-aware prompts synthesized.</div>
+                  <div><span style={{ color: '#64748b' }}>[10:31:05]</span> <span style={{ color: '#38bdf8' }}>Execution Agent:</span> Generating modernized routes.py ...</div>
+                  <div><span style={{ color: '#64748b' }}>[10:31:12]</span> <span style={{ color: '#38bdf8' }}>Validator Agent:</span> Verifying against AST checklist... Passed.</div>
+                  <div><span style={{ color: '#64748b' }}>[10:31:15]</span> <span style={{ color: '#4ade80' }}>Finalizer Agent:</span> Virtual runtime test verified (Pass).</div>
                 </>
               )}
             </div>

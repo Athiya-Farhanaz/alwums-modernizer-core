@@ -45,12 +45,12 @@ export default function App() {
     setPipelineState({ stage: 1, active: true, downloadBlob: null });
 
     const stageTimeline = [
-      { s: 1, agent: 'Analyzer', msg: `Scanning legacy codebase for ${pName}...` },
-      { s: 2, agent: 'Planner', msg: 'Decomposing legacy components into task checklist...' },
-      { s: 3, agent: 'Generator', msg: `Generating modernized ${targetTech} code...` },
-      { s: 4, agent: 'Tester', msg: 'Executing syntax validation and AST checks...' },
-      { s: 5, agent: 'Verifier', msg: 'Validating code against planner requirements...' },
-      { s: 6, agent: 'Finalizer', msg: 'Packaging modernized distribution archive...' }
+      { s: 1, agent: 'Discovery Agent', msg: `Scanning legacy codebase for ${pName}...` },
+      { s: 2, agent: 'Manager Agent', msg: 'Decomposing legacy components into task checklist...' },
+      { s: 3, agent: 'Prompt Maker Agent', msg: 'Synthesizing context-aware execution prompts...' },
+      { s: 4, agent: 'Execution Agent', msg: `Generating modernized ${targetTech} code...` },
+      { s: 5, agent: 'Validator Agent', msg: 'Validating code against manager checklist via feedback loop...' },
+      { s: 6, agent: 'Finalizer Agent', msg: 'Executing compiler checks and packaging distribution archive...' }
     ];
 
     for (const item of stageTimeline) {
@@ -84,7 +84,7 @@ export default function App() {
         setLogs(prev => [
           {
             time: new Date().toLocaleTimeString(),
-            agent: 'Finalizer',
+            agent: 'Finalizer Agent',
             level: 'success',
             message: `Upgrade complete! Output packaged as ${pName}_modernized.zip`
           },

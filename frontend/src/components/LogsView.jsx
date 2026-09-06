@@ -8,12 +8,12 @@ export default function LogsView({ logs = [] }) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const defaultLogs = [
-    { time: '10:31:15', agent: 'Generator', level: 'info', message: 'Generated products.py successfully' },
-    { time: '10:31:10', agent: 'Generator', level: 'info', message: 'Generating templates/products.html ...' },
-    { time: '10:30:58', agent: 'Generator', level: 'info', message: 'Generating models.py ...' },
-    { time: '10:30:46', agent: 'Planner', level: 'info', message: 'Plan created successfully' },
-    { time: '10:30:45', agent: 'Analyzer', level: 'info', message: 'Analysis completed. 142 files scanned' },
-    { time: '10:30:12', agent: 'Analyzer', level: 'info', message: 'Starting code analysis...' }
+    { time: '10:31:15', agent: 'Execution Agent', level: 'info', message: 'Generated modernized routes.py successfully' },
+    { time: '10:31:10', agent: 'Execution Agent', level: 'info', message: 'Generating templates/products.html ...' },
+    { time: '10:30:58', agent: 'Prompt Maker Agent', level: 'info', message: 'Context-aware prompt synthesized for products.asp' },
+    { time: '10:30:46', agent: 'Manager Agent', level: 'info', message: 'Task checklist and dependency graph built successfully' },
+    { time: '10:30:45', agent: 'Discovery Agent', level: 'info', message: 'Legacy discovery scan completed. 142 files correlated' },
+    { time: '10:30:12', agent: 'Discovery Agent', level: 'info', message: 'Starting legacy AST codebase analysis...' }
   ];
 
   const sourceLogs = logs.length > 0 ? logs : defaultLogs;
@@ -36,17 +36,17 @@ export default function LogsView({ logs = [] }) {
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <select
             className="form-input"
-            style={{ width: '180px' }}
+            style={{ width: '190px' }}
             value={filterAgent}
             onChange={(e) => setFilterAgent(e.target.value)}
           >
             <option value="all">All Agents</option>
-            <option value="Analyzer">Analyzer</option>
-            <option value="Planner">Planner</option>
-            <option value="Generator">Generator</option>
-            <option value="Tester">Tester</option>
-            <option value="Verifier">Verifier</option>
-            <option value="Finalizer">Finalizer</option>
+            <option value="Discovery Agent">Discovery Agent</option>
+            <option value="Manager Agent">Manager Agent</option>
+            <option value="Prompt Maker Agent">Prompt Maker Agent</option>
+            <option value="Execution Agent">Execution Agent</option>
+            <option value="Validator Agent">Validator Agent</option>
+            <option value="Finalizer Agent">Finalizer Agent</option>
           </select>
 
           <select
