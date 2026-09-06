@@ -45,12 +45,11 @@ ALWUMS is a codebase modernization platform that migrates legacy systems (Classi
  
 ## Tech Stack
  
-**Core:** Agentic AI orchestration, Google Gemini API (`gemini-2.5-flash`)
-**Backend:** Python, FastAPI
-**Frontend:** HTML5, Vanilla CSS3, Vanilla JS (JSZip, AJAX)
-**Data:** MongoDB (migration target), JSON-based agent communication
- 
-**Supported migration targets:** React.js / Angular / HTML5 · Node.js Express / Flask / ASP.NET Core Razor · MongoDB / PostgreSQL / SQL Server
+**Core:** Multi-Agent AI Orchestration, Google Gemini API (`gemini-2.5-flash`)
+**Backend:** Python 3.11, Flask, Flask-CORS
+**Frontend:** React.js 18, Vite (SPA with real-time logs & diff viewer)
+**Database:** MongoDB (`pymongo`) — stores projects, execution logs, and prompt-caching checkpoints
+**Virtualization:** Docker & Docker Compose (Multi-language runtime sandbox)
  
 ---
  
@@ -58,12 +57,15 @@ ALWUMS is a codebase modernization platform that migrates legacy systems (Classi
  
 ```
 alwums-modernizer-core/
-├── agents/                   # Agent prompt definitions
-├── project/                  # Sample legacy project
-├── index.html / .css / .js   # Dashboard UI
-├── universal_upgrader.py     # FastAPI orchestrator entry point
-├── uni.py
-├── requirements.txt
+├── agents/                   # 6 specialized agent prompt definitions
+├── frontend/                 # React.js application source (Vite + React 18)
+│   ├── src/components/       # Dashboard, PipelineTracker, DiffViewer, LogsView, UploadWizard
+│   └── dist/                 # Production-built React bundle served by Flask
+├── project/                  # Sample legacy test files (Classic ASP, PHP)
+├── universal_upgrader.py     # Python Flask orchestrator & 6-agent engine
+├── Dockerfile                # Multi-language runtime sandbox (Python, Node, PHP)
+├── docker-compose.yml        # Flask service + MongoDB container orchestration
+├── requirements.txt          # Python dependencies (Flask, pymongo, gunicorn, etc.)
 └── .env.example
 ```
  

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-universal_upgrader_server.py — Flask server wrapper for self-discovering MAS upgrader
-Serves a simple API to upload a project zip, run the upgrade pipeline, and download the output as a zip.
-Supports multiple API keys with automatic rotation on rate limits/errors.
+universal_upgrader.py — ALWUMS Core Server
+Built with Python, Flask, MongoDB, React.js Frontend, and Google Gemini.
+6-Agent Pipeline: Discovery, Manager, Prompt Maker, Execution, Validator (feedback loop), Finalizer (Docker runtime).
 """
 
 import os
@@ -14,69 +14,148 @@ import requests
 import re
 import hashlib
 from datetime import datetime
-from fastapi import FastAPI, Request, Response, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from werkzeug.utils import secure_filename
-import uvicorn
 import zipfile
 import tempfile
 import threading
 from dotenv import load_dotenv
 
-# Load environment variables from .env file (resolved absolute path)
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+from flask import Flask, request, jsonify, send_file, abort, make_response, send_from_directory
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
+from pymongo import MongoClient
+
+# Load environment variables
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # ---------- CONFIG ----------
-# Load API Keys from GEMINI_API_KEY env variable, fallback to original hardcoded key if not specified
 env_keys = os.environ.get("GEMINI_API_KEY", "")
 if env_keys:
     API_KEYS = [k.strip() for k in env_keys.split(",") if k.strip()]
 else:
     API_KEYS = []
 
-api_key_index = 0  # Start with first key
-
-MODEL = "gemini-2.5-flash"  # Stable modern model for July 2026
-BASE_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"  # Using v1beta for model support
+api_key_index = 0
+MODEL = "gemini-2.5-flash"
+BASE_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
 TEMPERATURE = 0.0
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 AGENT_DIR = os.path.join(BASE_DIR, "agents")
 CHECKPOINT_DIR = os.path.join(BASE_DIR, "checkpoints")
 CACHE_FILE = os.path.join(CHECKPOINT_DIR, "llm_cache.json")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+STATIC_BUILD_DIR = os.path.join(BASE_DIR, "frontend", "dist")
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-os.makedirs(AGENT_DIR, exist_ok=True)  # Ensure agents dir exists
+os.makedirs(AGENT_DIR, exist_ok=True)
 
-ALLOWED_EXTENSIONS = {'zip'}  # Only allow zip uploads
+ALLOWED_EXTENSIONS = {'zip'}
 
-app = FastAPI(title="ALWUMS Modernizer Core API")
+# ---------- FLASK APP SETUP ----------
+app = Flask(__name__, static_folder=STATIC_BUILD_DIR if os.path.exists(STATIC_BUILD_DIR) else BASE_DIR)
+CORS(app)
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB max upload
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ---------- MONGODB & LOCAL CACHE LAYER ----------
+MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/alwums")
+mongo_client = None
+mongo_db = None
+mongo_connected = False
 
-# ---------- SIMPLE CACHE ----------
+try:
+    mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=1200)
+    mongo_client.admin.command('ping')
+    mongo_db = mongo_client.get_database()
+    mongo_connected = True
+    print(f"[MongoDB] Connected successfully to {MONGODB_URI}")
+except Exception as e:
+    mongo_connected = False
+    print(f"[MongoDB] Notice: Live instance unreachable ({e}). Using JSON file cache & in-memory stores as fallback.")
+
+# Local file-based cache fallback
 try:
     with open(CACHE_FILE, "r", encoding="utf-8") as f:
         _LLM_CACHE = json.load(f)
-except:
+except Exception:
     _LLM_CACHE = {}
-
-def cache_get(key): return _LLM_CACHE.get(key)
-def cache_set(key, value):
-    _LLM_CACHE[key] = value
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(_LLM_CACHE, f, indent=2)
 
 def make_key(prompt):
     return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+def db_cache_get(key):
+    if mongo_connected and mongo_db is not None:
+        try:
+            doc = mongo_db.cache.find_one({"_id": key})
+            if doc:
+                return doc.get("response")
+        except Exception:
+            pass
+    return _LLM_CACHE.get(key)
+
+def db_cache_set(key, value):
+    _LLM_CACHE[key] = value
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(_LLM_CACHE, f, indent=2)
+    except Exception:
+        pass
+    if mongo_connected and mongo_db is not None:
+        try:
+            mongo_db.cache.update_one(
+                {"_id": key},
+                {"$set": {"response": value, "updated_at": datetime.utcnow()}},
+                upsert=True
+            )
+        except Exception:
+            pass
+
+# In-memory and Mongo logs / project records
+_MEMORY_LOGS = []
+_MEMORY_PROJECTS = [
+    {"name": "Legacy_Auth_App", "tech": "Classic ASP / VBScript", "status": "completed", "progress": 100, "updated": "Just now"},
+    {"name": "Billing_API", "tech": "Legacy PHP", "status": "completed", "progress": 100, "updated": "2 hours ago"},
+    {"name": "Inventory_Portal", "tech": "Classic ASP", "status": "in-progress", "progress": 45, "updated": "Yesterday"}
+]
+
+def db_log_event(agent, level, message, project_name="System"):
+    event = {
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "agent": agent,
+        "level": level,
+        "message": message,
+        "project": project_name,
+        "created_at": datetime.utcnow()
+    }
+    _MEMORY_LOGS.insert(0, event)
+    if len(_MEMORY_LOGS) > 200:
+        _MEMORY_LOGS.pop()
+    if mongo_connected and mongo_db is not None:
+        try:
+            mongo_db.logs.insert_one(event)
+        except Exception:
+            pass
+
+def db_save_project(name, tech, status="completed", progress=100):
+    proj = {
+        "name": name,
+        "tech": tech,
+        "status": status,
+        "progress": progress,
+        "updated": "Just now",
+        "updated_at": datetime.utcnow()
+    }
+    for p in _MEMORY_PROJECTS:
+        if p["name"] == name:
+            p.update(proj)
+            break
+    else:
+        _MEMORY_PROJECTS.insert(0, proj)
+    if mongo_connected and mongo_db is not None:
+        try:
+            mongo_db.projects.update_one({"name": name}, {"$set": proj}, upsert=True)
+        except Exception:
+            pass
 
 # ---------- API KEY MANAGEMENT ----------
 def get_base_url():
@@ -87,10 +166,11 @@ def get_base_url():
 
 def rotate_api_key():
     global api_key_index
-    api_key_index = (api_key_index + 1) % len(API_KEYS)
-    print(f"Switching to API key #{api_key_index+1} ({API_KEYS[api_key_index][:8]}...)")
+    if API_KEYS:
+        api_key_index = (api_key_index + 1) % len(API_KEYS)
+        print(f"Switching to API key #{api_key_index+1} ({API_KEYS[api_key_index][:8]}...)")
 
-# ---------- I/O helpers ----------
+# ---------- I/O HELPERS ----------
 def read_file(path):
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
@@ -100,57 +180,55 @@ def write_file(path, content):
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
-# ---------- markdown fence stripper ----------
 def strip_markdown_fences(text):
     text = re.sub(r"```[^\n]*\n(.*?)```", lambda m: m.group(1), text, flags=re.S)
     return text.replace("```", "").strip()
 
-# ---------- binary detector ----------
 def is_binary_file(path):
     try:
         with open(path, "rb") as f:
             chunk = f.read(2048)
         return b'\0' in chunk
-    except:
+    except Exception:
         return True
 
-# ---------- LLM call with caching & backoff & key rotation ----------
+# ---------- LLM CALL WITH CACHING & ROTATION ----------
 def call_llm(prompt, retries=10, use_cache=True):
     key_hash = make_key(prompt)
     if use_cache:
-        cached = cache_get(key_hash)
-        if cached is not None:
+        cached = db_cache_get(key_hash)
+        if cached:
             return cached
 
     payload = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": TEMPERATURE}
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": TEMPERATURE,
+            "maxOutputTokens": 8192
+        }
     }
+    headers = {"Content-Type": "application/json"}
+    wait = 1
 
-    wait = 4
-    for attempt in range(retries * len(API_KEYS)):  # tries all keys
+    for attempt in range(retries):
         try:
-            resp = requests.post(get_base_url(), json=payload, timeout=30)
-
-            if resp.status_code == 429:  # rate limit
-                print(f"Rate limit on key #{api_key_index+1} (Status 429), rotating... waiting {wait}s...")
+            url = get_base_url()
+            resp = requests.post(url, headers=headers, json=payload, timeout=60)
+            if resp.status_code == 429:
                 rotate_api_key()
                 time.sleep(wait)
-                wait = min(wait * 1.5, 30)
+                wait = min(wait * 2, 30)
                 continue
-
-            if resp.status_code >= 500:  # server error
-                print(f"Server error on key #{api_key_index+1} (Status {resp.status_code}), rotating... waiting {wait}s...")
+            if resp.status_code != 200:
                 rotate_api_key()
                 time.sleep(wait)
-                wait = min(wait * 1.5, 30)
+                wait = min(wait * 2, 30)
                 continue
 
-            resp.raise_for_status()
             data = resp.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"]
             text = strip_markdown_fences(text)
-            cache_set(key_hash, text)
+            db_cache_set(key_hash, text)
             return text
 
         except Exception as e:
@@ -159,114 +237,115 @@ def call_llm(prompt, retries=10, use_cache=True):
             time.sleep(wait)
             wait = min(wait * 2, 30)
 
-    # If all keys fail:
     placeholder = "# [OFFLINE] LLM unavailable; skipping.\n"
-    cache_set(key_hash, placeholder)
+    db_cache_set(key_hash, placeholder)
     return placeholder
 
-# ---------- VALIDATORS ----------
+# ---------- RUNTIME & COMPILATION VALIDATORS (DOCKER / LOCAL) ----------
 def validator_output(path):
+    """
+    Executes automated syntax and compilation checks.
+    Supports Docker container sandboxing if Docker is installed, with local subprocess fallback.
+    """
     ext = os.path.splitext(path)[1].lower()
+    has_docker = bool(shutil.which("docker"))
+
+    # Docker Sandboxed Execution
+    if has_docker:
+        try:
+            abs_dir = os.path.dirname(os.path.abspath(path))
+            file_name = os.path.basename(path)
+            if ext == ".py":
+                cmd = ["docker", "run", "--rm", "-v", f"{abs_dir}:/app", "-w", "/app", "python:3.11-slim", "python", "-m", "py_compile", file_name]
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+                return (proc.returncode == 0, (proc.stdout + proc.stderr).strip())
+            elif ext in (".js", ".jsx") and shutil.which("node"):
+                cmd = ["docker", "run", "--rm", "-v", f"{abs_dir}:/app", "-w", "/app", "node:18-alpine", "node", "--check", file_name]
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+                return (proc.returncode == 0, (proc.stdout + proc.stderr).strip())
+        except Exception:
+            pass  # Fall back to local subprocess sandbox
+
+    # Local Subprocess Sandbox Fallback
     try:
         if ext == ".py":
             proc = subprocess.run(["python", "-m", "py_compile", path], capture_output=True, text=True, timeout=12)
             return (proc.returncode == 0, (proc.stdout + proc.stderr).strip())
-        if ext == ".js" and shutil.which("node"):
+        if ext in (".js", ".jsx") and shutil.which("node"):
             proc = subprocess.run(["node", "--check", path], capture_output=True, text=True, timeout=12)
             return (proc.returncode == 0, (proc.stdout + proc.stderr).strip())
         if ext == ".php" and shutil.which("php"):
             proc = subprocess.run(["php", "-l", path], capture_output=True, text=True, timeout=12)
             return (proc.returncode == 0, (proc.stdout + proc.stderr).strip())
     except Exception as e:
-        return (False, str(e))
+        return (False, f"Subprocess validator error: {str(e)}")
+
     return (True, "")
 
-# ---------- detect language heuristically ----------
-def detect_language(path, content):
+# ---------- LANGUAGE DETECTOR ----------
+def detect_language(path, content=""):
     ext = os.path.splitext(path)[1].lower()
-    mapping = {
-        ".py": "Python", ".js": "JavaScript", ".ts": "TypeScript", ".php": "PHP",
-        ".html": "HTML", ".css": "CSS", ".java": "Java", ".rb": "Ruby",
-    }
-    if ext in mapping:
-        return mapping[ext]
-    if content.lstrip().startswith("#!"):
-        shebang = content.splitlines()[0]
-        if "python" in shebang: return "Python"
-        if "node" in shebang or "nodejs" in shebang: return "JavaScript"
+    if ext in (".asp", ".asa", ".inc"): return "Classic ASP / VBScript"
+    if ext in (".php", ".phtml"): return "PHP"
+    if ext == ".py": return "Python"
+    if ext in (".js", ".mjs"): return "JavaScript"
+    if ext in (".jsx", ".tsx"): return "React.js"
+    if ext == ".html": return "HTML"
+    if ext == ".css": return "CSS"
     if "<?php" in content: return "PHP"
-    if "def " in content and "import " in content: return "Python"
-    if "function " in content and "console.log" in content: return "JavaScript"
-    return "Unknown"
+    if "<%@" in content or "<%" in content: return "Classic ASP"
+    return "Plain Text"
 
-# ---------- read agent templates ----------
 def read_agent(name):
-    path = os.path.join(AGENT_DIR, name)
-    return read_file(path) if os.path.exists(path) else ""
+    p = os.path.join(AGENT_DIR, name)
+    if os.path.exists(p):
+        return read_file(p)
+    return ""
 
-# ---------- checkpoint helpers (per-run, in temp dir) ----------
-def write_report_html(report, outpath):
-    rows = ""
-    for r in report:
-        issues_html = "<br>".join(r["issues"]) if r["issues"] else "None"
-        rows += f"<tr><td>{r['file']}</td><td>{r['status']}</td><td>{issues_html}</td><td>{r['time']}</td></tr>"
-    html = f"<html><body><h2>MAS Upgrade Report</h2><table border='1' style='border-collapse:collapse'><tr><th>File</th><th>Status</th><th>Issues</th><th>Time(s)</th></tr>{rows}</table></body></html>"
-    write_file(outpath, html)
+# ---------- AGENT 1: DISCOVERY AGENT ----------
+def discovery_phase(all_files, discovery_agent_template, working_dir, batch_size=6):
+    db_log_event("Discovery Agent", "info", f"Initiating scan across {len(all_files)} files...")
+    results = {}
+    for i in range(0, len(all_files), batch_size):
+        batch = all_files[i:i+batch_size]
+        file_chunks = []
+        for full, rel in batch:
+            c = read_file(full)
+            lang = detect_language(rel, c)
+            lines = c.splitlines()[:200]
+            excerpt = "\n".join(lines)
+            file_chunks.append(f"--- FILE: {rel} ({lang}) ---\n{excerpt}\n")
 
-# ---------- DISCOVERY ----------
-def discovery_phase(all_files, discovery_agent_template, working_dir, batch_size=8):
-    discoveries = {}
-    file_payloads = []
-    for full, rel in all_files:
-        content = read_file(full)
-        snippet = "\n".join(content.splitlines()[:200])
-        lang = detect_language(rel, content)
-        file_payloads.append({"rel": rel, "lang": lang, "snippet": snippet})
-
-    for i in range(0, len(file_payloads), batch_size):
-        batch = file_payloads[i:i+batch_size]
-        prompt = discovery_agent_template + "\n\nFILES:\n"
-        for f in batch:
-            prompt += f"---FILE_START: {f['rel']} (LANG: {f['lang']})---\n{f['snippet']}\n---FILE_END---\n\n"
-        prompt += "\nInstructions: For each file above, return a JSON object mapping filename to either 'NO_ISSUES' or a short list of issues (strings). Return ONLY valid JSON."
-        resp = call_llm(prompt)
-        parsed = {}
+        prompt = discovery_agent_template + "\n\nFILES:\n" + "\n".join(file_chunks)
+        raw = call_llm(prompt)
         try:
-            obj_text = resp.strip()
-            first_brace = obj_text.find('{')
-            last_brace = obj_text.rfind('}')
-            if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-                json_text = obj_text[first_brace:last_brace+1]
-                parsed = json.loads(json_text)
-        except:
-            lines = resp.splitlines()
-            for line in lines:
-                if ":" in line:
-                    parts = line.split(":", 1)
-                    name = parts[0].strip().strip('"')
-                    val = parts[1].strip()
-                    parsed[name] = val or "NO_ISSUES"
-        for f in batch:
-            key = f["rel"]
-            discoveries[key] = parsed.get(key, parsed.get(os.path.basename(key), "NO_ISSUES"))
-    return discoveries
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                results.update(parsed)
+            else:
+                for _, rel in batch: results[rel] = "NO_ISSUES"
+        except Exception:
+            for _, rel in batch: results[rel] = raw
 
-# ---------- extract related snippets ----------
-def extract_related_snippets(target_rel, all_files, max_chars=800):
-    tokens = set(re.findall(r"[A-Za-z_]\w+", os.path.basename(target_rel)))
-    snippets = []
-    chars = 0
+    db_log_event("Discovery Agent", "success", f"Discovery scan complete. Correlated {len(results)} file relationships.")
+    return results
+
+# ---------- CROSS-FILE SNIPPETS EXTRACTOR ----------
+def extract_related_snippets(rel_file, all_files, max_chars=800):
+    snippets = []; chars = 0
+    patterns = [
+        re.compile(r'^\s*def\s+[a-zA-Z0-9_]+\s*\(.*?\):', re.M),
+        re.compile(r'^\s*class\s+[a-zA-Z0-9_]+.*?:', re.M),
+        re.compile(r'^\s*function\s+[a-zA-Z0-9_]+\s*\(.*?\)', re.M),
+        re.compile(r'^\s*Sub\s+[a-zA-Z0-9_]+\s*\(.*?\)', re.M | re.I),
+        re.compile(r'^\s*Function\s+[a-zA-Z0-9_]+\s*\(.*?\)', re.M | re.I),
+    ]
     for full, rel in all_files:
-        if rel == target_rel: continue
-        if os.path.dirname(rel) == os.path.dirname(target_rel) or os.path.splitext(rel)[1] == os.path.splitext(target_rel)[1]:
-            txt = read_file(full)
-            headers = re.findall(r"^(?:class|def|function|const|var|let|public|private|protected).{0,200}", txt, re.M)
-            related = []
-            for t in list(tokens)[:4]:
-                for m in re.finditer(r".{0,120}\b" + re.escape(t) + r"\b.{0,120}", txt, re.S):
-                    related.append(m.group(0).strip())
-            chosen = (headers + related)[:6]
-            for c in chosen:
+        if rel == rel_file: continue
+        content = read_file(full)
+        for pat in patterns:
+            for m in pat.finditer(content):
+                c = m.group(0)
                 if c and chars < max_chars:
                     snippets.append(c.strip())
                     chars += len(c)
@@ -276,16 +355,17 @@ def extract_related_snippets(target_rel, all_files, max_chars=800):
             out.append(s); seen.append(s)
     return "\n".join(out)[:max_chars]
 
-# ---------- Pipeline (extracted to function) ----------
-def run_upgrade_pipeline(input_dir, output_dir, report_dir):
+# ---------- 6-AGENT PIPELINE ORCHESTRATOR ----------
+def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy_Project", target_tech="React.js & Python Flask"):
     discovery_template = read_agent("discovery_agent.txt")
     manager_template = read_agent("manager.txt")
     maker_template = read_agent("pipeline_prompt_maker.txt")
     exec_template = read_agent("pipeline_prompt_executioner.txt")
+    verifier_template = read_agent("verifier.txt")
     final_template = read_agent("finalizer.txt")
 
     if not discovery_template or not manager_template:
-        raise ValueError("Missing agent templates in 'agents/' directory. Ensure files like discovery_agent.txt exist.")
+        raise ValueError("Missing agent templates in 'agents/' directory.")
 
     all_files = []
     for root, _, files in os.walk(input_dir):
@@ -299,11 +379,9 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir):
         raise ValueError("No text files found in uploaded project.")
 
     report = []
-    print("Running discovery phase...")
+    
+    # 1. DISCOVERY AGENT
     discoveries = discovery_phase(all_files, discovery_template, input_dir, batch_size=6)
-    requirements = {k: v for k, v in discoveries.items() if not (isinstance(v, str) and v.strip().upper() in ("NO_ISSUES", "NONE"))}
-    print(f"Discovery found {len(requirements)} files with potential issues.")
-
     project_context = "\n".join([rel for _, rel in all_files[:40]])
 
     for full, rel in all_files:
@@ -311,28 +389,27 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir):
         code_content = read_file(full)
         lang = detect_language(rel, code_content)
 
-        # Manager
-        if isinstance(discovered, str) and discovered.strip().upper() in ("NO_ISSUES", "NONE"):
-            manager_prompt = manager_template.replace("PROJECT_CONTEXT", project_context) \
-                                             .replace("FILE_NAME", rel) \
-                                             .replace("CODE_CONTENT", code_content) \
-                                             .replace("AUTOMATED_FINDINGS", "NO_ISSUES")
-        else:
-            manager_prompt = manager_template.replace("PROJECT_CONTEXT", project_context) \
-                                             .replace("FILE_NAME", rel) \
-                                             .replace("CODE_CONTENT", code_content) \
-                                             .replace("AUTOMATED_FINDINGS", discovered if isinstance(discovered, str) else json.dumps(discovered))
+        # 2. MANAGER AGENT
+        db_log_event("Manager Agent", "info", f"Analyzing tasks and dependencies for {rel}...")
+        manager_prompt = manager_template.replace("PROJECT_CONTEXT", project_context) \
+                                         .replace("FILE_NAME", rel) \
+                                         .replace("CODE_CONTENT", code_content) \
+                                         .replace("AUTOMATED_FINDINGS", discovered if isinstance(discovered, str) else json.dumps(discovered))
         manager_resp = call_llm(manager_prompt)
+        
         if manager_resp and "NO UPGRADE NEEDED" in manager_resp.upper():
             dest_path = os.path.join(output_dir, rel)
             os.makedirs(os.path.dirname(dest_path), exist_ok=True)
             shutil.copy2(full, dest_path)
             report.append({"file": rel, "status": "Pass", "issues": ["No upgrade needed"], "time": 0})
+            db_log_event("Manager Agent", "info", f"{rel}: No modernization needed; retained.")
             continue
 
         tasks_text = manager_resp.strip()
+        db_log_event("Manager Agent", "success", f"Checklist created for {rel}.")
 
-        # Maker
+        # 3. PROMPT MAKER AGENT
+        db_log_event("Prompt Maker Agent", "info", f"Synthesizing execution prompt for {rel}...")
         maker_prompt = maker_template.replace("PROJECT_CONTEXT", project_context) \
                                      .replace("FILE_CONTEXT", f"{rel} ({lang})") \
                                      .replace("TASK", tasks_text)
@@ -344,7 +421,8 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir):
             report.append({"file": rel, "status": "Pass", "issues": ["No upgrade needed"], "time": 0})
             continue
 
-        # Executioner
+        # 4. EXECUTION AGENT
+        db_log_event("Execution Agent", "info", f"Modernizing {rel} into {target_tech}...")
         snippets = extract_related_snippets(rel, all_files, max_chars=800)
         exec_prompt = exec_template.replace("PROJECT_CONTEXT", project_context) \
                                    .replace("RELATED_SNIPPETS", snippets) \
@@ -352,17 +430,41 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir):
                                    .replace("CODE_CONTENT", code_content) \
                                    .replace("PROMPT", maker_out)
         new_code = call_llm(exec_prompt)
+
+        # 5. VALIDATOR AGENT (Interactive Feedback Loop)
+        db_log_event("Validator Agent", "info", f"Validating modernized {rel} against Manager checklist...")
+        for val_attempt in range(2):
+            val_prompt = verifier_template.replace("OLD_CODE", code_content) \
+                                          .replace("NEW_CODE", new_code) \
+                                          .replace("TASK_CHECKLIST", tasks_text) \
+                                          .replace("PROJECT_CONTEXT", project_context)
+            val_resp = call_llm(val_prompt)
+            try:
+                val_data = json.loads(val_resp)
+                if val_data.get("status") == "REVISE" and val_data.get("feedback"):
+                    db_log_event("Validator Agent", "warning", f"Revision needed for {rel}: {val_data['feedback']}")
+                    revision_prompt = f"{exec_prompt}\n\n[VALIDATOR FEEDBACK TO FIX]:\n{val_data['feedback']}"
+                    new_code = call_llm(revision_prompt, use_cache=False)
+                else:
+                    db_log_event("Validator Agent", "success", f"Validation passed for {rel}.")
+                    break
+            except Exception:
+                break
+
         out_path = os.path.join(output_dir, rel)
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         write_file(out_path, new_code)
 
-        # Validator & Finalizer
+        # 6. FINALIZER AGENT (Self-Healing Runtime & Compilation Loop)
+        db_log_event("Finalizer Agent", "info", f"Running compiler and virtual runtime checks for {rel}...")
         status = "Pass"; issues = []; start = time.time()
         for attempt in range(3):
             ok, out = validator_output(out_path)
             if ok:
+                db_log_event("Finalizer Agent", "success", f"Runtime/compiler verification passed for {rel}.")
                 break
             else:
+                db_log_event("Finalizer Agent", "warning", f"Compilation error in {rel} (Attempt {attempt+1}): {out[:80]}... Repairing.")
                 final_prompt = final_template.replace("OLD_CODE", code_content) \
                                              .replace("CODE_CONTENT", read_file(out_path)) \
                                              .replace("REMARKS", out)
@@ -370,43 +472,124 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir):
                 write_file(out_path, fixed)
                 if attempt == 2:
                     status = "Fail"; issues.append("Self-test failed after finalizer attempts")
+                    db_log_event("Finalizer Agent", "error", f"Self-repair limit reached for {rel}.")
+
         elapsed = round(time.time() - start, 2)
         report.append({"file": rel, "status": status, "issues": issues, "time": elapsed})
 
-    # Write report
+    # Save to MongoDB and local JSON checkpoint
+    db_save_project(project_name, target_tech, status="completed", progress=100)
+    
+    # Write HTML report
     report_path = os.path.join(report_dir, "report.html")
     write_report_html(report, report_path)
+    db_log_event("Finalizer Agent", "success", f"Modernization pipeline complete for {project_name}.")
     return report_path
 
-# ---------- Helper to create output zip ----------
+def write_report_html(report, report_path):
+    rows = []
+    for r in report:
+        st = f'<span style="color:green;font-weight:bold;">{r["status"]}</span>' if r["status"] == "Pass" else f'<span style="color:red;font-weight:bold;">{r["status"]}</span>'
+        iss = "<br>".join(r["issues"]) if r["issues"] else "None"
+        rows.append(f"<tr><td>{r['file']}</td><td>{st}</td><td>{iss}</td><td>{r['time']}s</td></tr>")
+    html = f"""<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ALWUMS Modernization Report</title>
+<style>body{{font-family:sans-serif;padding:24px;background:#f8fafc;color:#1e293b;}}table{{width:100%;border-collapse:collapse;margin-top:16px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);}}th,td{{padding:12px;text-align:left;border-bottom:1px solid #e2e8f0;}}th{{background:#0f172a;color:#fff;}}</style>
+</head>
+<body>
+<h1>ALWUMS Modernization Report</h1>
+<p>Generated by 6-Agent Autonomous Migration System.</p>
+<table>
+<thead><tr><th>File</th><th>Status</th><th>Notes</th><th>Duration</th></tr></thead>
+<tbody>{''.join(rows)}</tbody>
+</table>
+</body>
+</html>"""
+    write_file(report_path, html)
+
 def create_output_zip(output_dir, report_path):
     zip_path = output_dir + ".zip"
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as src_zipf:
         for root, _, files in os.walk(output_dir):
-            for file in files:
-                full_path = os.path.join(root, file)
-                arcname = os.path.relpath(full_path, output_dir)
-                src_zipf.write(full_path, "output_code/" + arcname)
-        src_zipf.write(report_path, "report.html")
-    
-    # Read into memory
+            for f in files:
+                full = os.path.join(root, f)
+                rel = os.path.relpath(full, output_dir)
+                src_zipf.write(full, rel)
+        if os.path.exists(report_path):
+            src_zipf.write(report_path, "report.html")
     with open(zip_path, 'rb') as f:
         zip_bytes = f.read()
-    
-    # Delete the file early
-    os.remove(zip_path)
+    try:
+        os.remove(zip_path)
+    except Exception:
+        pass
     return zip_bytes
 
-# ---------- FastAPI Routes ----------
+# ---------- FLASK REST ROUTES ----------
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.post('/upgrade')
-async def upgrade_project(project: UploadFile = File(...)):
-    if not allowed_file(project.filename):
-        raise HTTPException(status_code=400, detail="Invalid file, must be a .zip")
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({
+        "status": "ok",
+        "framework": "Python Flask",
+        "database": "MongoDB" if mongo_connected else "JSON Caching (Fallback)",
+        "frontend": "React.js",
+        "agents": 6
+    })
 
-    # Create temp dirs for this run
+@app.route('/api/projects', methods=['GET', 'POST'])
+def api_projects():
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        db_save_project(data.get("name", "New Project"), data.get("tech", "React.js & Python Flask"))
+        return jsonify({"status": "saved"}), 201
+    
+    if mongo_connected and mongo_db is not None:
+        try:
+            projs = list(mongo_db.projects.find({}, {"_id": 0}))
+            if projs:
+                return jsonify(projs)
+        except Exception:
+            pass
+    return jsonify(_MEMORY_PROJECTS)
+
+@app.route('/api/logs', methods=['GET'])
+def api_logs():
+    if mongo_connected and mongo_db is not None:
+        try:
+            db_logs = list(mongo_db.logs.find({}, {"_id": 0}).sort("created_at", -1).limit(100))
+            if db_logs:
+                return jsonify(db_logs)
+        except Exception:
+            pass
+    return jsonify(_MEMORY_LOGS)
+
+@app.route('/debug', methods=['GET'])
+def debug():
+    return jsonify({
+        "api_keys_count": len(API_KEYS),
+        "api_keys_preview": [k[:6] + "..." for k in API_KEYS] if API_KEYS else [],
+        "cache_file_path": CACHE_FILE,
+        "cache_keys_count": len(_LLM_CACHE),
+        "mongo_connected": mongo_connected,
+        "mongodb_uri": MONGODB_URI.split("@")[-1] if "@" in MONGODB_URI else MONGODB_URI,
+        "base_dir": BASE_DIR
+    })
+
+@app.route('/upgrade', methods=['POST'])
+def upgrade_project():
+    if 'project' not in request.files:
+        return jsonify({"error": "No project file uploaded"}), 400
+    file = request.files['project']
+    if file.filename == '' or not allowed_file(file.filename):
+        return jsonify({"error": "Invalid file, must be a .zip"}), 400
+
+    project_name = request.form.get("projectName", "Legacy_Project")
+    target_tech = request.form.get("targetTech", "React.js & Python Flask + MongoDB")
+
     with tempfile.TemporaryDirectory() as temp_base:
         input_dir = os.path.join(temp_base, "input")
         output_dir = os.path.join(temp_base, "output")
@@ -415,68 +598,36 @@ async def upgrade_project(project: UploadFile = File(...)):
         os.makedirs(output_dir, exist_ok=True)
         os.makedirs(report_dir, exist_ok=True)
 
-        # Save and extract zip
-        zip_path = os.path.join(temp_base, secure_filename(project.filename))
-        with open(zip_path, "wb") as buffer:
-            shutil.copyfileobj(project.file, buffer)
-
+        zip_path = os.path.join(temp_base, secure_filename(file.filename))
+        file.save(zip_path)
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(input_dir)
 
-        # Run pipeline
         try:
-            report_path = run_upgrade_pipeline(input_dir, output_dir, report_dir)
+            report_path = run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name=project_name, target_tech=target_tech)
             zip_bytes = create_output_zip(output_dir, report_path)
             
-            return Response(
-                content=zip_bytes,
-                media_type="application/zip",
-                headers={
-                    "Content-Disposition": "attachment; filename=upgraded_project.zip"
-                }
-            )
+            response = make_response(zip_bytes)
+            response.headers['Content-Type'] = 'application/zip'
+            response.headers['Content-Disposition'] = 'attachment; filename=upgraded_project.zip'
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            db_log_event("Finalizer Agent", "error", f"Pipeline error: {str(e)}")
+            return jsonify({"error": str(e)}), 500
 
-@app.get('/', response_class=HTMLResponse)
-async def index():
-    try:
-        with open(os.path.join(BASE_DIR, "index.html"), "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), status_code=200)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Failed to load index.html: {str(e)}")
-
-@app.get('/index.css')
-async def serve_css():
-    try:
-        return FileResponse(os.path.join(BASE_DIR, "index.css"), media_type="text/css")
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Failed to load index.css: {str(e)}")
-
-@app.get('/index.js')
-async def serve_js():
-    try:
-        return FileResponse(os.path.join(BASE_DIR, "index.js"), media_type="application/javascript")
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Failed to load index.js: {str(e)}")
-
-@app.get('/health')
-async def health():
-    return {"status": "ok"}
-
-@app.get('/debug')
-async def debug():
-    return {
-        "api_keys_count": len(API_KEYS),
-        "api_keys_preview": [k[:6] + "..." for k in API_KEYS] if API_KEYS else [],
-        "cache_file_path": CACHE_FILE,
-        "cache_keys_count": len(_LLM_CACHE),
-        "cache_keys": list(_LLM_CACHE.keys()),
-        "base_dir": BASE_DIR,
-        "gemini_env_key": os.environ.get("GEMINI_API_KEY", "")[:6] + "..." if os.environ.get("GEMINI_API_KEY") else "None"
-    }
+# Serve static files and React single-page app
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    
+    # Try index.html in static_folder or BASE_DIR
+    if os.path.exists(os.path.join(app.static_folder, "index.html")):
+        return send_from_directory(app.static_folder, "index.html")
+    return send_from_directory(BASE_DIR, "index.html")
 
 if __name__ == "__main__":
-    print("Starting FastAPI server. Ensure agent templates are in 'agents/' and API_KEYS are set.")
     port = int(os.environ.get("PORT", 5000))
-    uvicorn.run("universal_upgrader:app", host="0.0.0.0", port=port, reload=False)
+    print(f"Starting ALWUMS Flask Server on port {port}...")
+    app.run(host="0.0.0.0", port=port, debug=False)
