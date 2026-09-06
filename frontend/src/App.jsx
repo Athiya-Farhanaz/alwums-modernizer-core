@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import JSZip from 'jszip';
 import Dashboard from './components/Dashboard';
 import PipelineTracker from './components/PipelineTracker';
 import DiffViewer from './components/DiffViewer';
@@ -12,6 +13,7 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [pipelineState, setPipelineState] = useState({ stage: 1, active: false, downloadBlob: null });
   const [selectedTargetTech, setSelectedTargetTech] = useState('csharp');
+  const [customFiles, setCustomFiles] = useState({});
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -35,7 +37,7 @@ export default function App() {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  const handleStartPipeline = async ({ projectName, targetTech, zipBlob }) => {
+  const handleStartPipeline = async ({ projectName, targetTech, zipBlob, originalFiles }) => {
     setSelectedTargetTech(targetTech);
     setActiveTab('pipeline');
     setPipelineState({ stage: 1, active: true, downloadBlob: null });
@@ -86,6 +88,62 @@ export default function App() {
           },
           ...prev
         ]);
+
+        // Unpack upgraded files from response zip and populate Diff Viewer dynamically
+        try {
+          const zip = await JSZip.loadAsync(blob);
+          const customMap = {};
+          const originalMap = {};
+
+          if (originalFiles && originalFiles.length) {
+            for (const f of originalFiles) {
+              const rel = f.webkitRelativePath || f.name;
+              try {
+                const txt = await f.text();
+                originalMap[rel] = txt;
+                originalMap[f.name] = txt;
+              } catch (e) {}
+            }
+          }
+
+          const filePromises = [];
+          zip.forEach((relPath, zipEntry) => {
+            if (!zipEntry.dir && !relPath.endsWith('.html') && !relPath.endsWith('.zip')) {
+              filePromises.push(
+                zipEntry.async('text').then(text => {
+                  const baseName = relPath.split('/').pop();
+                  const origCode = originalMap[relPath] || originalMap[baseName] || '// Legacy source code';
+                  customMap[baseName] = {
+                    targetLanguage: targetTech,
+                    category: 'custom',
+                    originalTitle: `Original Legacy File (${baseName})`,
+                    modernizedTitle: `Modernized Output (${baseName})`,
+                    original: origCode,
+                    modernized: text
+                  };
+                })
+              );
+            }
+          });
+
+          await Promise.all(filePromises);
+          if (Object.keys(customMap).length > 0) {
+            setCustomFiles(customMap);
+          }
+        } catch (zipErr) {
+          console.warn('Could not extract files for diff viewer:', zipErr);
+        }
+
+        // Live refresh projects & logs from backend
+        fetch('/api/projects')
+          .then(r => r.json())
+          .then(data => setProjects(Array.isArray(data) ? data : []))
+          .catch(() => {});
+
+        fetch('/api/logs')
+          .then(r => r.json())
+          .then(data => setLogs(Array.isArray(data) ? data : []))
+          .catch(() => {});
       }
     } catch (err) {
       console.error('Pipeline error:', err);
@@ -195,9 +253,10 @@ export default function App() {
               logs={logs}
               currentStage={pipelineState.stage}
               onDownload={pipelineState.downloadBlob ? handleDownload : null}
+              onNavigate={setActiveTab}
             />
           )}
-          {activeTab === 'diff' && <DiffViewer targetTech={selectedTargetTech} />}
+          {activeTab === 'diff' && <DiffViewer targetTech={selectedTargetTech} customFiles={customFiles} />}
           {activeTab === 'logs' && <LogsView logs={logs} />}
         </div>
       </main>

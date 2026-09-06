@@ -195,7 +195,8 @@ export default function UploadWizard({ onStartPipeline }) {
       targetCategory: activePreset?.category || 'all',
       instructions,
       zipBlob,
-      fileCount: files.length
+      fileCount: files.length,
+      originalFiles: files
     });
   };
 

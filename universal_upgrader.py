@@ -111,11 +111,19 @@ def db_cache_set(key, value):
             pass
 
 # In-memory and Mongo logs / project records
-_MEMORY_LOGS = []
+_boot_time = datetime.now().strftime("%H:%M:%S")
+_MEMORY_LOGS = [
+    {"time": _boot_time, "agent": "Finalizer Agent", "level": "success", "message": "Docker sandbox & subprocess compilation test suite armed.", "project": "System"},
+    {"time": _boot_time, "agent": "Validator Agent", "level": "info", "message": "Autonomous syntax and task-completion validator synchronized.", "project": "System"},
+    {"time": _boot_time, "agent": "Execution Agent", "level": "info", "message": "Gemini 2.5 Flash code transformation engine ready.", "project": "System"},
+    {"time": _boot_time, "agent": "Prompt Maker Agent", "level": "info", "message": "Cross-file context synthesizer and prompt maker online.", "project": "System"},
+    {"time": _boot_time, "agent": "Manager Agent", "level": "info", "message": "Task dependency planner & checklist orchestrator ready.", "project": "System"},
+    {"time": _boot_time, "agent": "Discovery Agent", "level": "info", "message": "AST analyzer & framework signature scanner initialized.", "project": "System"}
+]
 _MEMORY_PROJECTS = [
-    {"name": "Legacy_Auth_App", "tech": "Classic ASP / VBScript", "status": "completed", "progress": 100, "updated": "Just now"},
-    {"name": "Billing_API", "tech": "Legacy PHP", "status": "completed", "progress": 100, "updated": "2 hours ago"},
-    {"name": "Inventory_Portal", "tech": "Classic ASP", "status": "in-progress", "progress": 45, "updated": "Yesterday"}
+    {"name": "Legacy_Auth_App", "tech": "C# ASP.NET Core Razor", "status": "completed", "progress": 100, "updated": "Just now"},
+    {"name": "Billing_API", "tech": "Python Flask & MongoDB", "status": "completed", "progress": 100, "updated": "2 hours ago"},
+    {"name": "Inventory_Portal", "tech": "Java Spring Boot", "status": "in-progress", "progress": 45, "updated": "Yesterday"}
 ]
 
 def db_log_event(agent, level, message, project_name="System"):

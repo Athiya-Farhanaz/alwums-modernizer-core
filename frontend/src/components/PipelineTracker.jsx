@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-export default function PipelineTracker({ logs, currentStage, onDownload }) {
+export default function PipelineTracker({ logs, currentStage, onDownload, onNavigate }) {
   const consoleRef = useRef(null);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export default function PipelineTracker({ logs, currentStage, onDownload }) {
     { num: 1, name: 'Discovery Agent', desc: 'Identifies legacy technologies, dependencies, and structure' },
     { num: 2, name: 'Manager Agent', desc: 'Builds modernization checklist and task dependency order' },
     { num: 3, name: 'Prompt Maker Agent', desc: 'Synthesizes context-aware prompts for code execution' },
-    { num: 4, name: 'Execution Agent', desc: 'Modernizes code via Gemini LLM into React.js & Flask' },
+    { num: 4, name: 'Execution Agent', desc: 'Modernizes code via Gemini LLM into selected target architecture' },
     { num: 5, name: 'Validator Agent', desc: 'Validates code against Manager checklist via feedback loop' },
     { num: 6, name: 'Finalizer Agent', desc: 'Executes compiler & Docker virtual runtime tests' },
   ];
@@ -52,10 +52,19 @@ export default function PipelineTracker({ logs, currentStage, onDownload }) {
           <div className="card-panel">
             <div className="card-panel-header">
               <h3 className="card-panel-title">Execution Details</h3>
-              {currentStage >= 6 && onDownload && (
-                <button className="btn-primary" onClick={onDownload}>
-                  Download Modernized ZIP
-                </button>
+              {currentStage >= 6 && (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {onNavigate && (
+                    <button className="btn-secondary" onClick={() => onNavigate('diff')}>
+                      Inspect in Diff Viewer →
+                    </button>
+                  )}
+                  {onDownload && (
+                    <button className="btn-primary" onClick={onDownload}>
+                      Download Modernized ZIP
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
