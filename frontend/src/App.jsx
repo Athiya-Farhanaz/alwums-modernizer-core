@@ -11,6 +11,7 @@ export default function App() {
   const [projects, setProjects] = useState([]);
   const [logs, setLogs] = useState([]);
   const [pipelineState, setPipelineState] = useState({ stage: 1, active: false, downloadBlob: null });
+  const [selectedTargetTech, setSelectedTargetTech] = useState('csharp');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -35,6 +36,7 @@ export default function App() {
   };
 
   const handleStartPipeline = async ({ projectName, targetTech, zipBlob }) => {
+    setSelectedTargetTech(targetTech);
     setActiveTab('pipeline');
     setPipelineState({ stage: 1, active: true, downloadBlob: null });
 
@@ -195,7 +197,7 @@ export default function App() {
               onDownload={pipelineState.downloadBlob ? handleDownload : null}
             />
           )}
-          {activeTab === 'diff' && <DiffViewer />}
+          {activeTab === 'diff' && <DiffViewer targetTech={selectedTargetTech} />}
           {activeTab === 'logs' && <LogsView logs={logs} />}
         </div>
       </main>
