@@ -182,7 +182,7 @@ export default function App() {
           <div className="header-right">
             <div className="server-status-pill">
               <span className="server-status-dot online"></span>
-              Backend: <strong>Flask</strong> • DB: <strong>MongoDB</strong> • Frontend: <strong>React</strong>
+              <strong>6 Agents Active</strong> • System Operational
             </div>
           </div>
         </header>

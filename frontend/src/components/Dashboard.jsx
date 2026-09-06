@@ -23,15 +23,16 @@ export default function Dashboard({ onNavigate, projects }) {
             Autonomous legacy modernization with 6 specialized agents and self-healing auto-repair.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {['Python', 'Flask', 'React.js', 'MongoDB', 'Gemini AI'].map(t => (
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {['Autonomous Migration', 'AST Parsing', 'Self-Healing Loop', 'Enterprise v2.4'].map(t => (
             <span key={t} style={{
-              background: 'rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.18)',
               padding: '4px 12px',
               borderRadius: '20px',
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: 600,
-              backdropFilter: 'blur(4px)'
+              backdropFilter: 'blur(4px)',
+              letterSpacing: '0.2px'
             }}>
               {t}
             </span>
