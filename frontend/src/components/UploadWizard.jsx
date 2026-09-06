@@ -168,19 +168,68 @@ export default function UploadWizard({ onStartPipeline }) {
     ? `${frontendLang} Frontend + ${backendLang} Backend + ${databaseTech}`
     : (activePreset ? activePreset.display : `${frontendLang} + ${backendLang} + ${databaseTech}`);
 
-  const handleFolderSelect = async (e) => {
-    const selected = Array.from(e.target.files);
-    if (!selected.length) return;
+  const [isDragging, setIsDragging] = useState(false);
+  const [isPackaging, setIsPackaging] = useState(false);
 
-    setFiles(selected);
-    const zip = new JSZip();
-    for (const f of selected) {
-      const relPath = f.webkitRelativePath || f.name;
-      zip.file(relPath, f);
+  const processFilesList = async (selectedFiles) => {
+    if (!selectedFiles || !selectedFiles.length) return;
+    setIsPackaging(true);
+
+    try {
+      // If user uploaded a single .zip file directly
+      if (selectedFiles.length === 1 && selectedFiles[0].name.toLowerCase().endsWith('.zip')) {
+        const zipFile = selectedFiles[0];
+        const pName = zipFile.name.replace(/\.zip$/i, '');
+        setProjectName(pName);
+        setFiles([zipFile]);
+        setZipBlob(zipFile);
+        setIsPackaging(false);
+        setStep(2);
+        return;
+      }
+
+      setFiles(selectedFiles);
+      const zip = new JSZip();
+      for (const f of selectedFiles) {
+        const relPath = f.webkitRelativePath || f.name;
+        zip.file(relPath, f);
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      setZipBlob(content);
+      setIsPackaging(false);
+      setStep(2);
+    } catch (err) {
+      console.error('Error packaging files:', err);
+      alert('Error processing files: ' + err.message);
+      setIsPackaging(false);
     }
-    const content = await zip.generateAsync({ type: 'blob' });
-    setZipBlob(content);
-    setStep(2);
+  };
+
+  const handleFolderSelect = async (e) => {
+    const selected = Array.from(e.target.files || []);
+    await processFilesList(selected);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const droppedFiles = Array.from(e.dataTransfer.files || []);
+    if (droppedFiles.length > 0) {
+      await processFilesList(droppedFiles);
+    }
   };
 
   const handleStart = () => {
@@ -224,26 +273,57 @@ export default function UploadWizard({ onStartPipeline }) {
         {/* Step 1: Upload */}
         {step === 1 && (
           <div className="wizard-step-pane active">
-            <label className="drag-drop-zone" style={{ display: 'block' }}>
+            <div
+              className={`drag-drop-zone ${isDragging ? 'dragover' : ''}`}
+              style={{
+                display: 'block',
+                cursor: 'pointer',
+                border: isDragging ? '2px dashed #3b82f6' : '2px dashed var(--border-color)',
+                backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.05)' : 'var(--bg-card)'
+              }}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <div className="upload-icon-wrapper">
-                <svg style={{ width: '32px', height: '32px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }} viewBox="0 0 24 24">
+                <svg style={{ width: '32px', height: '32px', fill: 'none', stroke: '#3b82f6', strokeWidth: 2 }} viewBox="0 0 24 24">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
                 </svg>
               </div>
-              <h3>Select or Drag Legacy Web Application Folder</h3>
-              <p>Supports Classic ASP (.asp, .inc), Legacy PHP (.php), HTML, and VBScript files.</p>
-              <span className="btn-primary" style={{ cursor: 'pointer' }}>
-                Browse Folder
-              </span>
-              <input
-                type="file"
-                webkitdirectory="true"
-                directory="true"
-                multiple
-                style={{ display: 'none' }}
-                onChange={handleFolderSelect}
-              />
-            </label>
+              <h3>{isPackaging ? 'Packaging project files...' : isDragging ? 'Drop legacy folder or zip file here' : 'Drop your legacy project folder or .zip file here'}</h3>
+              <p>Supports Classic ASP (.asp, .inc), Legacy PHP (.php), HTML, and VBScript applications.</p>
+              
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+                <label className="btn-primary" style={{ cursor: 'pointer', margin: 0 }}>
+                  Browse Folder
+                  <input
+                    type="file"
+                    webkitdirectory="true"
+                    directory="true"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleFolderSelect}
+                    disabled={isPackaging}
+                  />
+                </label>
+                <label className="btn-outline" style={{ cursor: 'pointer', margin: 0, padding: '10px 18px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600 }}>
+                  Select .ZIP Archive
+                  <input
+                    type="file"
+                    accept=".zip"
+                    style={{ display: 'none' }}
+                    onChange={handleFolderSelect}
+                    disabled={isPackaging}
+                  />
+                </label>
+              </div>
+              {isPackaging && (
+                <div style={{ marginTop: '14px', color: '#3b82f6', fontSize: '13px', fontWeight: 600 }}>
+                  ⏳ Analyzing and indexing codebase...
+                </div>
+              )}
+            </div>
           </div>
         )}
 

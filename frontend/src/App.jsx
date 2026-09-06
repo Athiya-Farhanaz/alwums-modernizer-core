@@ -17,7 +17,7 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [projectName, setProjectName] = useState('Inventory_System');
   const [selectedTargetTech, setSelectedTargetTech] = useState('Python (Flask)');
-  const [pipelineState, setPipelineState] = useState({ stage: 3, active: false, downloadBlob: null });
+  const [pipelineState, setPipelineState] = useState({ stage: 0, active: false, downloadBlob: null, error: null });
   const [customFiles, setCustomFiles] = useState({});
 
   useEffect(() => {
@@ -38,11 +38,11 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  const handleStartPipeline = async ({ projectName: pName, targetTech, zipBlob, originalFiles }) => {
+  const handleStartPipeline = async ({ projectName: pName, targetTech, instructions, zipBlob, originalFiles }) => {
     setProjectName(pName);
     setSelectedTargetTech(targetTech);
     setActiveTab('pipeline');
-    setPipelineState({ stage: 1, active: true, downloadBlob: null });
+    setPipelineState({ stage: 1, active: true, downloadBlob: null, error: null });
 
     const stageTimeline = [
       { s: 1, agent: 'Discovery Agent', msg: `Scanning legacy codebase for ${pName}...` },
@@ -53,34 +53,46 @@ export default function App() {
       { s: 6, agent: 'Finalizer Agent', msg: 'Executing compiler checks and packaging distribution archive...' }
     ];
 
-    for (const item of stageTimeline) {
-      setPipelineState(prev => ({ ...prev, stage: item.s }));
-      setLogs(prev => [
-        {
-          time: new Date().toLocaleTimeString(),
-          agent: item.agent,
-          level: 'info',
-          message: item.msg
-        },
-        ...prev
-      ]);
-      await new Promise(r => setTimeout(r, 1100));
-    }
+    // Progression timer to reflect multi-agent orchestration
+    const progressInterval = setInterval(() => {
+      setPipelineState(prev => {
+        if (!prev.active || prev.stage >= 5) return prev;
+        const nextStage = prev.stage + 1;
+        const item = stageTimeline[nextStage - 1];
+        if (item) {
+          setLogs(l => [
+            {
+              time: new Date().toLocaleTimeString(),
+              agent: item.agent,
+              level: 'info',
+              message: item.msg
+            },
+            ...l
+          ]);
+        }
+        return { ...prev, stage: nextStage };
+      });
+    }, 1800);
 
     try {
       const formData = new FormData();
       formData.append('project', zipBlob, `${pName}.zip`);
       formData.append('projectName', pName);
       formData.append('targetTech', targetTech);
+      if (instructions) {
+        formData.append('instructions', instructions);
+      }
 
       const res = await fetch('/upgrade', {
         method: 'POST',
         body: formData
       });
 
+      clearInterval(progressInterval);
+
       if (res.ok) {
         const blob = await res.blob();
-        setPipelineState(prev => ({ ...prev, stage: 6, active: false, downloadBlob: blob }));
+        setPipelineState({ stage: 6, active: false, downloadBlob: blob, error: null });
         setLogs(prev => [
           {
             time: new Date().toLocaleTimeString(),
@@ -118,7 +130,7 @@ export default function App() {
                   customMap[baseName] = {
                     targetLanguage: targetTech,
                     category: 'custom',
-                    originalTitle: `Original Legacy File (${baseName})`,
+                    originalTitle: `Original Legacy (${baseName})`,
                     modernizedTitle: `Modernized Output (${baseName})`,
                     original: origCode,
                     modernized: text
@@ -146,8 +158,24 @@ export default function App() {
           .then(r => r.json())
           .then(data => setLogs(Array.isArray(data) ? data : []))
           .catch(() => {});
+      } else {
+        const errJson = await res.json().catch(() => ({ error: 'Modernization request failed' }));
+        clearInterval(progressInterval);
+        setPipelineState(prev => ({ ...prev, active: false, error: errJson.error }));
+        setLogs(prev => [
+          {
+            time: new Date().toLocaleTimeString(),
+            agent: 'Finalizer Agent',
+            level: 'error',
+            message: `Pipeline failed: ${errJson.error || 'Server error'}`
+          },
+          ...prev
+        ]);
+        alert(`Modernization error: ${errJson.error || 'Server error occurred'}`);
       }
     } catch (err) {
+      clearInterval(progressInterval);
+      setPipelineState(prev => ({ ...prev, active: false, error: err.message }));
       console.error('Pipeline error:', err);
     }
   };
@@ -279,7 +307,7 @@ export default function App() {
 
           <div
             className={`nav-item ${activeTab === 'help' ? 'active' : ''}`}
-            onClick={() => alert('ALWUMS Help: Autonomous Multi-Agent Modernization System. Select "New Project" to upload and upgrade legacy codebases.')}
+            onClick={() => setActiveTab('help')}
           >
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Help
@@ -313,9 +341,30 @@ export default function App() {
             </p>
           </div>
 
-          <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            {/* Theme Toggle Button */}
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: 'var(--text-primary)'
+              }}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            >
+              {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            </button>
+
             {/* Notification Bell */}
-            <div style={{ position: 'relative', cursor: 'pointer' }} title="Notifications">
+            <div style={{ position: 'relative', cursor: 'pointer' }} title="System Operational">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -358,7 +407,15 @@ export default function App() {
           )}
 
           {activeTab === 'projects' && (
-            <ProjectsList projects={projects} onNavigate={setActiveTab} />
+            <ProjectsList
+              projects={projects}
+              onNavigate={setActiveTab}
+              onSelectProject={(proj) => {
+                setProjectName(proj.name);
+                setSelectedTargetTech(proj.tech);
+                setActiveTab('diff');
+              }}
+            />
           )}
 
           {activeTab === 'upload' && (
@@ -371,6 +428,7 @@ export default function App() {
               currentStage={pipelineState.stage}
               projectName={projectName}
               targetTech={selectedTargetTech}
+              error={pipelineState.error}
               onDownload={pipelineState.downloadBlob ? handleDownload : null}
               onNavigate={setActiveTab}
             />
@@ -381,7 +439,7 @@ export default function App() {
           )}
 
           {activeTab === 'diff' && (
-            <DiffViewer targetTech={selectedTargetTech} customFiles={customFiles} />
+            <DiffViewer targetTech={selectedTargetTech} customFiles={customFiles} projectName={projectName} />
           )}
 
           {activeTab === 'output' && (
@@ -395,11 +453,60 @@ export default function App() {
           )}
 
           {activeTab === 'settings' && (
-            <SettingsView />
+            <SettingsView theme={theme} setTheme={setTheme} />
           )}
 
           {activeTab === 'logs' && (
             <LogsView logs={logs} />
+          )}
+
+          {activeTab === 'help' && (
+            <div className="page-view active-view">
+              <div className="card-panel" style={{ maxWidth: '840px', margin: '0 auto', padding: '32px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
+                  ALWUMS Platform Documentation & Help
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
+                  <strong>ALWUMS</strong> (Autonomous Legacy Web Application Upgrade System) uses a cooperative 6-agent architecture to modernize monolithic legacy codebases (such as Classic ASP, legacy PHP, and ASP.NET) into modern architectures.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                  <div style={{ padding: '16px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0', color: '#3b82f6' }}>1. Discovery Agent</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Scans file trees, AST structures, database calls, session handlers, and legacy patterns.</p>
+                  </div>
+                  <div style={{ padding: '16px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0', color: '#3b82f6' }}>2. Manager Agent</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Constructs dependency graph, orchestrates migration order, and creates execution tasks.</p>
+                  </div>
+                  <div style={{ padding: '16px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0', color: '#3b82f6' }}>3. Prompt Maker Agent</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Synthesizes cross-file symbol context and user directives into code transformation prompts.</p>
+                  </div>
+                  <div style={{ padding: '16px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0', color: '#3b82f6' }}>4. Execution Agent</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Transforms legacy logic into target modern framework code with idiomatic design patterns.</p>
+                  </div>
+                  <div style={{ padding: '16px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0', color: '#3b82f6' }}>5. Validator Agent</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Executes a feedback loop against task requirements to detect regressions or missing functions.</p>
+                  </div>
+                  <div style={{ padding: '16px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0', color: '#3b82f6' }}>6. Finalizer Agent</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Runs real compilers, linter checks, self-heals syntax errors, and packages the verified archive.</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button className="btn-primary" onClick={() => setActiveTab('upload')}>
+                    Start New Migration
+                  </button>
+                  <button className="btn-outline" onClick={() => setActiveTab('dashboard')}>
+                    Back to Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </main>

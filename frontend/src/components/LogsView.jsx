@@ -3,17 +3,18 @@ import React, { useState } from 'react';
 export default function LogsView({ logs = [] }) {
   const [filterAgent, setFilterAgent] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
-  const [dateFilter, setDateFilter] = useState('2025-05-12');
+  const [dateFilter, setDateFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const defaultLogs = [
-    { time: '10:31:15', agent: 'Execution Agent', level: 'info', message: 'Generated modernized routes.py successfully' },
-    { time: '10:31:10', agent: 'Execution Agent', level: 'info', message: 'Generating templates/products.html ...' },
-    { time: '10:30:58', agent: 'Prompt Maker Agent', level: 'info', message: 'Context-aware prompt synthesized for products.asp' },
-    { time: '10:30:46', agent: 'Manager Agent', level: 'info', message: 'Task checklist and dependency graph built successfully' },
-    { time: '10:30:45', agent: 'Discovery Agent', level: 'info', message: 'Legacy discovery scan completed. 142 files correlated' },
-    { time: '10:30:12', agent: 'Discovery Agent', level: 'info', message: 'Starting legacy AST codebase analysis...' }
+    { time: '14:23:57', agent: 'Finalizer Agent', level: 'success', message: 'Docker sandbox & subprocess compilation test suite armed.' },
+    { time: '14:23:57', agent: 'Validator Agent', level: 'info', message: 'Autonomous syntax and task-completion validator synchronized.' },
+    { time: '14:23:57', agent: 'Execution Agent', level: 'info', message: 'Gemini 2.5 Flash code transformation engine ready.' },
+    { time: '14:23:57', agent: 'Prompt Maker Agent', level: 'info', message: 'Cross-file context synthesizer and prompt maker online.' },
+    { time: '14:23:57', agent: 'Manager Agent', level: 'info', message: 'Task dependency planner & checklist orchestrator ready.' },
+    { time: '14:23:57', agent: 'Discovery Agent', level: 'info', message: 'AST analyzer & framework signature scanner initialized.' }
   ];
 
   const sourceLogs = logs.length > 0 ? logs : defaultLogs;
@@ -21,15 +22,28 @@ export default function LogsView({ logs = [] }) {
   const filteredLogs = sourceLogs.filter(log => {
     const matchAgent = filterAgent === 'all' || log.agent.toLowerCase().includes(filterAgent.toLowerCase());
     const matchLevel = filterLevel === 'all' || log.level.toLowerCase() === filterLevel.toLowerCase();
-    const matchSearch = !searchTerm || log.message.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchAgent && matchLevel && matchSearch;
+    const matchSearch = !searchTerm || (log.message && log.message.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchDate = !dateFilter || (log.created_at && log.created_at.startsWith(dateFilter));
+    return matchAgent && matchLevel && matchSearch && matchDate;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const displayedLogs = filteredLogs.slice(startIndex, startIndex + pageSize);
+
+  const getLevelStyle = (level) => {
+    const l = (level || 'info').toLowerCase();
+    if (l === 'error') return { bg: '#fef2f2', text: '#dc2626' };
+    if (l === 'warning') return { bg: '#fffbeb', text: '#d97706' };
+    if (l === 'success') return { bg: '#ecfdf5', text: '#059669' };
+    return { bg: '#eff6ff', text: '#2563eb' };
+  };
 
   return (
     <div className="page-view active-view">
       <div className="card-panel" style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 20px 0', color: 'var(--text-primary)' }}>
-          Logs
+          Multi-Agent System Telemetry Logs
         </h3>
 
         {/* Filter Bar */}
@@ -38,7 +52,7 @@ export default function LogsView({ logs = [] }) {
             className="form-input"
             style={{ width: '190px' }}
             value={filterAgent}
-            onChange={(e) => setFilterAgent(e.target.value)}
+            onChange={(e) => { setFilterAgent(e.target.value); setCurrentPage(1); }}
           >
             <option value="all">All Agents</option>
             <option value="Discovery Agent">Discovery Agent</option>
@@ -53,7 +67,7 @@ export default function LogsView({ logs = [] }) {
             className="form-input"
             style={{ width: '140px' }}
             value={filterLevel}
-            onChange={(e) => setFilterLevel(e.target.value)}
+            onChange={(e) => { setFilterLevel(e.target.value); setCurrentPage(1); }}
           >
             <option value="all">All Levels</option>
             <option value="info">INFO</option>
@@ -67,16 +81,17 @@ export default function LogsView({ logs = [] }) {
             className="form-input"
             style={{ width: '160px' }}
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }}
+            title="Filter by date"
           />
 
           <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
             <input
               type="text"
               className="form-input"
-              placeholder="Search logs..."
+              placeholder="Search logs by keyword..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               style={{ width: '100%', paddingLeft: '34px' }}
             />
             <svg
@@ -100,44 +115,47 @@ export default function LogsView({ logs = [] }) {
             <thead>
               <tr>
                 <th style={{ width: '110px' }}>Time</th>
-                <th style={{ width: '150px' }}>Agent</th>
-                <th style={{ width: '100px' }}>Level</th>
+                <th style={{ width: '170px' }}>Agent</th>
+                <th style={{ width: '110px' }}>Level</th>
                 <th>Message</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.length === 0 ? (
+              {displayedLogs.length === 0 ? (
                 <tr>
                   <td colSpan="4" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                     No matching log entries found.
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log, i) => (
-                  <tr key={i}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {log.time || '10:30:12'}
-                    </td>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {log.agent}
-                    </td>
-                    <td>
-                      <span style={{
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '10px',
-                        background: log.level === 'error' ? '#fef2f2' : log.level === 'warning' ? '#fffbeb' : '#eff6ff',
-                        color: log.level === 'error' ? '#dc2626' : log.level === 'warning' ? '#d97706' : '#2563eb'
-                      }}>
-                        {log.level.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-                      {log.message}
-                    </td>
-                  </tr>
-                ))
+                displayedLogs.map((log, i) => {
+                  const style = getLevelStyle(log.level);
+                  return (
+                    <tr key={i}>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {log.time || '14:23:57'}
+                      </td>
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {log.agent}
+                      </td>
+                      <td>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '10px',
+                          background: style.bg,
+                          color: style.text
+                        }}>
+                          {(log.level || 'info').toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                        {log.message}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -146,16 +164,32 @@ export default function LogsView({ logs = [] }) {
         {/* Pagination */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            Showing 1 to {filteredLogs.length} of 156 logs
+            Showing {filteredLogs.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + pageSize, filteredLogs.length)} of {filteredLogs.length} logs
           </span>
           <div style={{ display: 'flex', gap: '4px' }}>
-            <button className="pagination-btn" disabled={currentPage === 1}>&lt;</button>
-            <button className={`pagination-btn ${currentPage === 1 ? 'active' : ''}`} onClick={() => setCurrentPage(1)}>1</button>
-            <button className={`pagination-btn ${currentPage === 2 ? 'active' : ''}`} onClick={() => setCurrentPage(2)}>2</button>
-            <button className={`pagination-btn ${currentPage === 3 ? 'active' : ''}`} onClick={() => setCurrentPage(3)}>3</button>
-            <span style={{ padding: '0 6px', color: 'var(--text-muted)' }}>...</span>
-            <button className="pagination-btn" onClick={() => setCurrentPage(26)}>26</button>
-            <button className="pagination-btn">&gt;</button>
+            <button
+              className="pagination-btn"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            >
+              &lt;
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              className="pagination-btn"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            >
+              &gt;
+            </button>
           </div>
         </div>
       </div>

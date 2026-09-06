@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from 'react';
 
 export default function PipelineTracker({
   logs = [],
-  currentStage = 3,
+  currentStage = 0,
   projectName = 'Inventory_System',
   targetTech = 'Python (Flask)',
+  error = null,
   onDownload,
   onNavigate
 }) {
@@ -17,19 +18,43 @@ export default function PipelineTracker({
   }, [logs]);
 
   const agents = [
-    { num: 1, name: 'Discovery Agent', desc: 'Code Discovery & Scanning', defaultTime: '00:01:45' },
-    { num: 2, name: 'Manager Agent', desc: 'Task Planning & Checklist', defaultTime: '00:01:12' },
-    { num: 3, name: 'Prompt Maker Agent', desc: 'Context-Aware Prompt Synthesis', defaultTime: '00:00:54' },
-    { num: 4, name: 'Execution Agent', desc: 'Autonomous Code Generation', defaultTime: '00:02:34' },
-    { num: 5, name: 'Validator Agent', desc: 'Verification & Feedback Loop', defaultTime: '--:--:--' },
-    { num: 6, name: 'Finalizer Agent', desc: 'Compiler Testing & Packaging', defaultTime: '--:--:--' }
+    { num: 1, name: 'Discovery Agent', desc: 'Code Discovery & Scanning', defaultTime: '00:00:15' },
+    { num: 2, name: 'Manager Agent', desc: 'Task Planning & Checklist', defaultTime: '00:00:12' },
+    { num: 3, name: 'Prompt Maker Agent', desc: 'Context-Aware Prompt Synthesis', defaultTime: '00:00:18' },
+    { num: 4, name: 'Execution Agent', desc: 'Autonomous Code Generation', defaultTime: '00:00:45' },
+    { num: 5, name: 'Validator Agent', desc: 'Verification & Feedback Loop', defaultTime: '00:00:20' },
+    { num: 6, name: 'Finalizer Agent', desc: 'Compiler Testing & Packaging', defaultTime: '00:00:25' }
   ];
 
-  const currentAgent = agents[Math.min(currentStage - 1, 5)];
+  const currentAgent = agents[Math.min(Math.max(currentStage - 1, 0), 5)];
   const progressPercent = Math.min(Math.round((currentStage / 6) * 100), 100);
+  const statusLabel = error ? 'Failed' : currentStage >= 6 ? 'Completed' : currentStage > 0 ? 'In Progress' : 'Ready';
+  const statusColor = error ? { bg: '#fef2f2', text: '#dc2626' } : currentStage >= 6 ? { bg: '#ecfdf5', text: '#059669' } : { bg: '#eff6ff', text: '#2563eb' };
 
   return (
     <div className="page-view active-view">
+      {/* Error Banner */}
+      {error && (
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #fca5a5',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <strong style={{ color: '#dc2626', fontSize: '13px' }}>Pipeline Interrupted: </strong>
+            <span style={{ color: '#7f1d1d', fontSize: '13px' }}>{error}</span>
+          </div>
+          <button className="btn-secondary" onClick={() => onNavigate('upload')} style={{ fontSize: '12px', padding: '6px 12px' }}>
+            Try Again
+          </button>
+        </div>
+      )}
+
       {/* Header bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -41,10 +66,10 @@ export default function PipelineTracker({
             fontWeight: 600,
             padding: '4px 12px',
             borderRadius: '12px',
-            background: currentStage >= 6 ? '#ecfdf5' : '#eff6ff',
-            color: currentStage >= 6 ? '#059669' : '#2563eb'
+            background: statusColor.bg,
+            color: statusColor.text
           }}>
-            {currentStage >= 6 ? 'Completed' : 'In Progress'}
+            {statusLabel}
           </span>
         </div>
 

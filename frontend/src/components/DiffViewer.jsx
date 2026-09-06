@@ -576,12 +576,26 @@ const LANGUAGE_CATEGORIES = [
   { id: 'golang', label: 'Go (Golang Gin)' }
 ];
 
-export default function DiffViewer({ customFiles, targetTech }) {
-  const allFiles = { ...SAMPLE_FILES, ...(customFiles || {}) };
+export default function DiffViewer({ customFiles, targetTech, projectName = 'Modernization Project' }) {
+  const hasCustom = customFiles && Object.keys(customFiles).length > 0;
+  const allFiles = { ...(hasCustom ? customFiles : {}), ...SAMPLE_FILES };
   const allKeys = Object.keys(allFiles);
 
-  // Derive initial category if targetTech is passed
+  const categories = [
+    { id: 'all', label: 'All Target Languages' },
+    ...(hasCustom ? [{ id: 'custom', label: `✨ Upgraded Files (${Object.keys(customFiles).length})` }] : []),
+    { id: 'csharp', label: 'C# (ASP.NET Core 8 / Razor)' },
+    { id: 'python', label: 'Python (Flask & FastAPI)' },
+    { id: 'react', label: 'React.js Frontend' },
+    { id: 'nodejs', label: 'TypeScript / Node.js Express' },
+    { id: 'java', label: 'Java (Spring Boot 3)' },
+    { id: 'php', label: 'PHP 8.3 (Modern Laravel)' },
+    { id: 'golang', label: 'Go (Golang Gin)' }
+  ];
+
+  // Derive initial category: prioritize custom upgraded files if they exist
   const determineInitialCategory = () => {
+    if (hasCustom) return 'custom';
     if (!targetTech) return 'all';
     const lower = targetTech.toLowerCase();
     if (lower.includes('c#') || lower.includes('dotnet') || lower.includes('razor')) return 'csharp';
@@ -604,7 +618,17 @@ export default function DiffViewer({ customFiles, targetTech }) {
 
   const [selectedFile, setSelectedFile] = useState(filteredKeys[0] || allKeys[0] || '');
 
-  // When category changes, update selected file if not in filtered list
+  // When customFiles arrive, switch to custom category
+  useEffect(() => {
+    if (hasCustom) {
+      setSelectedCategory('custom');
+      const customKeys = Object.keys(customFiles);
+      if (customKeys.length > 0) {
+        setSelectedFile(customKeys[0]);
+      }
+    }
+  }, [customFiles]);
+
   const handleCategoryChange = (cat) => {
     setSelectedCategory(cat);
     const matches = allKeys.filter(k => cat === 'all' || allFiles[k]?.category === cat);
@@ -612,18 +636,6 @@ export default function DiffViewer({ customFiles, targetTech }) {
       setSelectedFile(matches[0]);
     }
   };
-
-  // If targetTech prop changes from outside
-  useEffect(() => {
-    if (targetTech) {
-      const cat = determineInitialCategory();
-      setSelectedCategory(cat);
-      const matches = allKeys.filter(k => cat === 'all' || allFiles[k]?.category === cat);
-      if (matches.length > 0) {
-        setSelectedFile(matches[0]);
-      }
-    }
-  }, [targetTech]);
 
   const active = allFiles[selectedFile] || {
     original: '',
@@ -636,12 +648,47 @@ export default function DiffViewer({ customFiles, targetTech }) {
   const rightPanelTitle = active.modernizedTitle || `Modernized Code (${active.targetLanguage || 'Modernized Architecture'})`;
   const leftPanelTitle = active.originalTitle || 'Original Source (Legacy ASP / PHP)';
 
+  const renderCodeWithLineNumbers = (code) => {
+    if (!code) return <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', padding: '12px' }}>No code content</div>;
+    const lines = code.split('\n');
+    return (
+      <div style={{ display: 'table', width: '100%' }}>
+        {lines.map((line, idx) => (
+          <div key={idx} style={{ display: 'table-row', minHeight: '20px' }}>
+            <span style={{
+              display: 'table-cell',
+              width: '38px',
+              textAlign: 'right',
+              paddingRight: '12px',
+              userSelect: 'none',
+              color: 'var(--text-muted)',
+              opacity: 0.6,
+              fontSize: '11px',
+              borderRight: '1px solid var(--border-color)',
+              verticalAlign: 'top'
+            }}>
+              {idx + 1}
+            </span>
+            <span style={{
+              display: 'table-cell',
+              paddingLeft: '12px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all'
+            }}>
+              {line || ' '}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="page-view active-view">
       <div className="card-panel">
         <div className="diff-header-bar" style={{ flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Project: Inventory_System &gt;</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Project: {projectName} &gt;</div>
             <h3 className="card-panel-title" style={{ margin: '2px 0 0 0' }}>Code Diff</h3>
           </div>
 
@@ -651,11 +698,11 @@ export default function DiffViewer({ customFiles, targetTech }) {
               <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Target:</span>
               <select
                 className="form-input filter-dropdown"
-                style={{ width: '230px' }}
+                style={{ width: '240px' }}
                 value={selectedCategory}
                 onChange={(e) => handleCategoryChange(e.target.value)}
               >
-                {LANGUAGE_CATEGORIES.map(cat => (
+                {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.label}</option>
                 ))}
               </select>
@@ -666,7 +713,7 @@ export default function DiffViewer({ customFiles, targetTech }) {
               <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>File:</span>
               <select
                 className="form-input filter-dropdown"
-                style={{ width: '210px' }}
+                style={{ width: '220px' }}
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
               >
@@ -687,15 +734,14 @@ export default function DiffViewer({ customFiles, targetTech }) {
             </div>
             <div style={{
               flex: 1,
-              padding: '16px',
+              padding: '12px 8px',
               overflowY: 'auto',
               backgroundColor: 'var(--bg-primary)',
               fontFamily: 'var(--font-mono)',
               fontSize: '12px',
-              lineHeight: 1.6,
-              whiteSpace: 'pre'
+              lineHeight: 1.6
             }}>
-              {active.original}
+              {renderCodeWithLineNumbers(active.original)}
             </div>
           </div>
 
@@ -707,15 +753,14 @@ export default function DiffViewer({ customFiles, targetTech }) {
             </div>
             <div style={{
               flex: 1,
-              padding: '16px',
+              padding: '12px 8px',
               overflowY: 'auto',
               backgroundColor: 'var(--bg-primary)',
               fontFamily: 'var(--font-mono)',
               fontSize: '12px',
-              lineHeight: 1.6,
-              whiteSpace: 'pre'
+              lineHeight: 1.6
             }}>
-              {active.modernized}
+              {renderCodeWithLineNumbers(active.modernized)}
             </div>
           </div>
         </div>

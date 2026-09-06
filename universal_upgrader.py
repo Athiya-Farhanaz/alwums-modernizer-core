@@ -17,6 +17,7 @@ from datetime import datetime
 import zipfile
 import tempfile
 import threading
+import html
 from dotenv import load_dotenv
 
 from flask import Flask, request, jsonify, send_file, abort, make_response, send_from_directory
@@ -37,7 +38,7 @@ else:
 
 api_key_index = 0
 MODEL = "gemini-2.5-flash"
-BASE_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+BASE_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 TEMPERATURE = 0.0
 
 AGENT_DIR = os.path.join(BASE_DIR, "agents")
@@ -53,7 +54,9 @@ os.makedirs(AGENT_DIR, exist_ok=True)
 ALLOWED_EXTENSIONS = {'zip'}
 
 # ---------- FLASK APP SETUP ----------
-app = Flask(__name__, static_folder=STATIC_BUILD_DIR if os.path.exists(STATIC_BUILD_DIR) else BASE_DIR)
+SAFE_STATIC_FALLBACK = os.path.join(BASE_DIR, "static_fallback")
+os.makedirs(SAFE_STATIC_FALLBACK, exist_ok=True)
+app = Flask(__name__, static_folder=STATIC_BUILD_DIR if os.path.exists(STATIC_BUILD_DIR) else SAFE_STATIC_FALLBACK)
 CORS(app)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB max upload
 
@@ -170,7 +173,13 @@ def get_base_url():
     global api_key_index
     if not API_KEYS:
         raise ValueError("No API keys configured")
-    return BASE_URL_TEMPLATE.format(model=MODEL, key=API_KEYS[api_key_index])
+    return BASE_URL_TEMPLATE.format(model=MODEL)
+
+def get_current_api_key():
+    """Return the current API key for use in HTTP headers."""
+    if not API_KEYS:
+        raise ValueError("No API keys configured")
+    return API_KEYS[api_key_index]
 
 def rotate_api_key():
     global api_key_index
@@ -215,12 +224,13 @@ def call_llm(prompt, retries=10, use_cache=True):
             "maxOutputTokens": 8192
         }
     }
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "x-goog-api-key": get_current_api_key()}
     wait = 1
 
     for attempt in range(retries):
         try:
             url = get_base_url()
+            headers["x-goog-api-key"] = get_current_api_key()
             resp = requests.post(url, headers=headers, json=payload, timeout=60)
             if resp.status_code == 429:
                 rotate_api_key()
@@ -245,8 +255,8 @@ def call_llm(prompt, retries=10, use_cache=True):
             time.sleep(wait)
             wait = min(wait * 2, 30)
 
+    # Don't cache failure — allow retry on next attempt
     placeholder = "# [OFFLINE] LLM unavailable; skipping.\n"
-    db_cache_set(key_hash, placeholder)
     return placeholder
 
 # ---------- RUNTIME & COMPILATION VALIDATORS (DOCKER / LOCAL) ----------
@@ -363,8 +373,33 @@ def extract_related_snippets(rel_file, all_files, max_chars=800):
             out.append(s); seen.append(s)
     return "\n".join(out)[:max_chars]
 
+def map_target_extension(rel_path, target_tech):
+    """Maps legacy source files to modern architecture file extensions."""
+    base, ext = os.path.splitext(rel_path)
+    ext = ext.lower()
+    t = target_tech.lower()
+    if ext in ('.css', '.json', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.txt', '.md', '.sql', '.env'):
+        return rel_path
+    if "c#" in t or "asp.net" in t:
+        return f"{base}.cs" if ext in ('.asp', '.asa', '.inc', '.php', '.py') else rel_path
+    if "java" in t or "spring" in t:
+        return f"{base}.java" if ext in ('.asp', '.asa', '.inc', '.php', '.py') else rel_path
+    if "go" in t or "golang" in t:
+        return f"{base}.go" if ext in ('.asp', '.asa', '.inc', '.php') else rel_path
+    if "fastapi" in t or "flask" in t or "django" in t or "python" in t:
+        if "react" in t and any(k in base.lower() for k in ("ui", "view", "component", "page", "app")):
+            return f"{base}.jsx"
+        return f"{base}.py" if ext in ('.asp', '.asa', '.inc', '.php') else rel_path
+    if "next" in t or "react" in t:
+        return f"{base}.jsx" if ext in ('.asp', '.asa', '.inc', '.php', '.html') else rel_path
+    if "node" in t or "express" in t:
+        return f"{base}.js" if ext in ('.asp', '.asa', '.inc', '.php') else rel_path
+    if "laravel" in t or "php" in t:
+        return f"{base}.php" if ext in ('.asp', '.asa', '.inc') else rel_path
+    return rel_path
+
 # ---------- 6-AGENT PIPELINE ORCHESTRATOR ----------
-def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy_Project", target_tech="React.js & Python Flask"):
+def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy_Project", target_tech="React.js & Python Flask", instructions=""):
     discovery_template = read_agent("discovery_agent.txt")
     manager_template = read_agent("manager.txt")
     maker_template = read_agent("pipeline_prompt_maker.txt")
@@ -418,9 +453,12 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy
 
         # 3. PROMPT MAKER AGENT
         db_log_event("Prompt Maker Agent", "info", f"Synthesizing execution prompt for {rel}...")
+        task_prompt_text = f"Target Architecture: {target_tech}\n\nTasks:\n{tasks_text}"
+        if instructions:
+            task_prompt_text += f"\n\nUser Modernization Directives:\n{instructions}"
         maker_prompt = maker_template.replace("PROJECT_CONTEXT", project_context) \
                                      .replace("FILE_CONTEXT", f"{rel} ({lang})") \
-                                     .replace("TASK", f"Target Architecture: {target_tech}\n\nTasks:\n{tasks_text}")
+                                     .replace("TASK", task_prompt_text)
         maker_out = call_llm(maker_prompt)
         if maker_out and maker_out.strip().upper() == "NO UPGRADE NEEDED":
             dest_path = os.path.join(output_dir, rel)
@@ -459,20 +497,21 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy
             except Exception:
                 break
 
-        out_path = os.path.join(output_dir, rel)
+        target_rel = map_target_extension(rel, target_tech)
+        out_path = os.path.join(output_dir, target_rel)
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         write_file(out_path, new_code)
 
         # 6. FINALIZER AGENT (Self-Healing Runtime & Compilation Loop)
-        db_log_event("Finalizer Agent", "info", f"Running compiler and virtual runtime checks for {rel}...")
+        db_log_event("Finalizer Agent", "info", f"Running compiler and virtual runtime checks for {target_rel}...")
         status = "Pass"; issues = []; start = time.time()
         for attempt in range(3):
             ok, out = validator_output(out_path)
             if ok:
-                db_log_event("Finalizer Agent", "success", f"Runtime/compiler verification passed for {rel}.")
+                db_log_event("Finalizer Agent", "success", f"Runtime/compiler verification passed for {target_rel}.")
                 break
             else:
-                db_log_event("Finalizer Agent", "warning", f"Compilation error in {rel} (Attempt {attempt+1}): {out[:80]}... Repairing.")
+                db_log_event("Finalizer Agent", "warning", f"Compilation error in {target_rel} (Attempt {attempt+1}): {out[:80]}... Repairing.")
                 final_prompt = final_template.replace("OLD_CODE", code_content) \
                                              .replace("CODE_CONTENT", read_file(out_path)) \
                                              .replace("REMARKS", out)
@@ -480,10 +519,11 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy
                 write_file(out_path, fixed)
                 if attempt == 2:
                     status = "Fail"; issues.append("Self-test failed after finalizer attempts")
-                    db_log_event("Finalizer Agent", "error", f"Self-repair limit reached for {rel}.")
+                    db_log_event("Finalizer Agent", "error", f"Self-repair limit reached for {target_rel}.")
 
         elapsed = round(time.time() - start, 2)
-        report.append({"file": rel, "status": status, "issues": issues, "time": elapsed})
+        display_name = f"{rel} → {target_rel}" if target_rel != rel else rel
+        report.append({"file": display_name, "status": status, "issues": issues, "time": elapsed})
 
     # Save to MongoDB and local JSON checkpoint
     db_save_project(project_name, target_tech, status="completed", progress=100)
@@ -497,9 +537,10 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy
 def write_report_html(report, report_path):
     rows = []
     for r in report:
-        st = f'<span style="color:green;font-weight:bold;">{r["status"]}</span>' if r["status"] == "Pass" else f'<span style="color:red;font-weight:bold;">{r["status"]}</span>'
-        iss = "<br>".join(r["issues"]) if r["issues"] else "None"
-        rows.append(f"<tr><td>{r['file']}</td><td>{st}</td><td>{iss}</td><td>{r['time']}s</td></tr>")
+        st = f'<span style="color:green;font-weight:bold;">{html.escape(r["status"])}</span>' if r["status"] == "Pass" else f'<span style="color:red;font-weight:bold;">{html.escape(r["status"])}</span>'
+        iss = "<br>".join([html.escape(str(x)) for x in r["issues"]]) if r["issues"] else "None"
+        file_name = html.escape(str(r['file']))
+        rows.append(f"<tr><td>{file_name}</td><td>{st}</td><td>{iss}</td><td>{r['time']}s</td></tr>")
     html = f"""<!doctype html>
 <html>
 <head><meta charset="utf-8"><title>ALWUMS Modernization Report</title>
@@ -575,17 +616,46 @@ def api_logs():
             pass
     return jsonify(_MEMORY_LOGS)
 
-@app.route('/debug', methods=['GET'])
-def debug():
-    return jsonify({
-        "api_keys_count": len(API_KEYS),
-        "api_keys_preview": [k[:6] + "..." for k in API_KEYS] if API_KEYS else [],
-        "cache_file_path": CACHE_FILE,
-        "cache_keys_count": len(_LLM_CACHE),
-        "mongo_connected": mongo_connected,
-        "mongodb_uri": MONGODB_URI.split("@")[-1] if "@" in MONGODB_URI else MONGODB_URI,
-        "base_dir": BASE_DIR
-    })
+# /debug endpoint REMOVED for security — was exposing API keys and server paths
+
+# Settings memory store
+_MEMORY_SETTINGS = {
+    "provider": "gemini",
+    "model": MODEL,
+    "apiKey": (API_KEYS[0][:6] + "..." + API_KEYS[0][-4:]) if API_KEYS else "",
+    "temperature": TEMPERATURE,
+    "maxTokens": 8192
+}
+
+@app.route('/api/settings', methods=['GET', 'POST'])
+def api_settings():
+    global MODEL, TEMPERATURE, API_KEYS
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        if "model" in data and data["model"]:
+            MODEL = data["model"]
+            _MEMORY_SETTINGS["model"] = MODEL
+        if "temperature" in data:
+            try:
+                TEMPERATURE = float(data["temperature"])
+                _MEMORY_SETTINGS["temperature"] = TEMPERATURE
+            except (ValueError, TypeError):
+                pass
+        if "maxTokens" in data:
+            try:
+                _MEMORY_SETTINGS["maxTokens"] = int(data["maxTokens"])
+            except (ValueError, TypeError):
+                pass
+        if "provider" in data:
+            _MEMORY_SETTINGS["provider"] = data["provider"]
+        if "apiKey" in data and data["apiKey"] and "..." not in data["apiKey"]:
+            new_key = data["apiKey"].strip()
+            if new_key:
+                API_KEYS = [new_key]
+                _MEMORY_SETTINGS["apiKey"] = new_key[:6] + "..." + new_key[-4:]
+        db_log_event("Manager Agent", "info", f"System configuration updated: Model={MODEL}, Temp={TEMPERATURE}")
+        return jsonify({"status": "saved", "settings": _MEMORY_SETTINGS})
+    return jsonify(_MEMORY_SETTINGS)
 
 @app.route('/upgrade', methods=['POST'])
 def upgrade_project():
@@ -597,6 +667,7 @@ def upgrade_project():
 
     project_name = request.form.get("projectName", "Legacy_Project")
     target_tech = request.form.get("targetTech", "React.js & Python Flask + MongoDB")
+    instructions = request.form.get("instructions", "")
 
     with tempfile.TemporaryDirectory() as temp_base:
         input_dir = os.path.join(temp_base, "input")
@@ -609,10 +680,15 @@ def upgrade_project():
         zip_path = os.path.join(temp_base, secure_filename(file.filename))
         file.save(zip_path)
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            # Security: Validate all paths to prevent Zip Slip (path traversal)
+            for member in zip_ref.namelist():
+                member_path = os.path.realpath(os.path.join(input_dir, member))
+                if not member_path.startswith(os.path.realpath(input_dir)):
+                    return jsonify({"error": f"Rejected: zip contains unsafe path '{member}'"}), 400
             zip_ref.extractall(input_dir)
 
         try:
-            report_path = run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name=project_name, target_tech=target_tech)
+            report_path = run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name=project_name, target_tech=target_tech, instructions=instructions)
             zip_bytes = create_output_zip(output_dir, report_path)
             
             response = make_response(zip_bytes)

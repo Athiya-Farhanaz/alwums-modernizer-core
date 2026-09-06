@@ -1,10 +1,11 @@
 import React from 'react';
 
 export default function Dashboard({ onNavigate, projects = [] }) {
-  const totalProjects = projects.length > 0 ? projects.length : 12;
-  const completedProjects = projects.length > 0 ? projects.filter(p => p.status === 'completed').length : 8;
-  const inProgressProjects = projects.length > 0 ? projects.filter(p => p.status === 'in-progress').length : 3;
-  const successRate = totalProjects > 0 ? Math.min(100, Math.round((completedProjects / totalProjects) * 100)) : 92;
+  const hasProjects = projects && projects.length > 0;
+  const totalProjects = hasProjects ? projects.length : 3;
+  const completedProjects = hasProjects ? projects.filter(p => p.status === 'completed').length : 2;
+  const inProgressProjects = hasProjects ? projects.filter(p => p.status === 'in-progress').length : 1;
+  const successRate = totalProjects > 0 ? Math.min(100, Math.round((completedProjects / totalProjects) * 100)) : 100;
 
   const pipelineAgents = [
     {
@@ -79,13 +80,19 @@ export default function Dashboard({ onNavigate, projects = [] }) {
     }
   ];
 
-  const recentActivities = [
-    { name: 'HR_Portal', tech: 'Classic ASP', status: 'Completed', time: '2 mins ago', color: '#3b82f6' },
-    { name: 'Inventory_System', tech: 'Classic ASP', status: 'In Progress', time: '15 mins ago', color: '#10b981' },
-    { name: 'Old_CRM', tech: 'ASP', status: 'Completed', time: '1 hour ago', color: '#f59e0b' },
-    { name: 'Billing_App', tech: 'Classic ASP', status: 'Failed', time: '3 hours ago', color: '#3b82f6' },
-    { name: 'Legacy_Reports', tech: 'Classic ASP', status: 'Completed', time: '1 day ago', color: '#10b981' }
-  ];
+  const recentActivities = hasProjects
+    ? projects.slice(0, 5).map(p => ({
+        name: p.name,
+        tech: p.tech || 'Modernized Architecture',
+        status: p.status === 'completed' ? 'Completed' : p.status === 'failed' ? 'Failed' : 'In Progress',
+        time: p.updated || 'Just now',
+        color: p.status === 'completed' ? '#10b981' : p.status === 'failed' ? '#ef4444' : '#3b82f6'
+      }))
+    : [
+        { name: 'Legacy_Auth_App', tech: 'C# ASP.NET Core Razor', status: 'Completed', time: 'Just now', color: '#10b981' },
+        { name: 'Billing_API', tech: 'Python Flask & MongoDB', status: 'Completed', time: '2 hours ago', color: '#10b981' },
+        { name: 'Inventory_Portal', tech: 'Java Spring Boot', status: 'In Progress', time: 'Yesterday', color: '#3b82f6' }
+      ];
 
   return (
     <div className="page-view active-view" style={{ padding: '0 4px' }}>

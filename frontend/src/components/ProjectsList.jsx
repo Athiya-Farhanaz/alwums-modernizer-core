@@ -8,10 +8,11 @@ const DEFAULT_PROJECTS = [
   { name: 'Legacy_Reports', tech: 'Classic ASP', status: 'Completed', progress: 100, updated: '1 day ago' }
 ];
 
-export default function ProjectsList({ projects = [], onNavigate }) {
+export default function ProjectsList({ projects = [], onNavigate, onSelectProject }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
 
   const combinedProjects = projects.length > 0
     ? projects.map(p => ({
@@ -29,6 +30,18 @@ export default function ProjectsList({ projects = [], onNavigate }) {
     const matchesStatus = statusFilter === 'All' || p.status.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const displayedProjects = filtered.slice(startIndex, startIndex + pageSize);
+
+  const handleRowClick = (proj) => {
+    if (onSelectProject) {
+      onSelectProject(proj);
+    } else {
+      onNavigate('diff');
+    }
+  };
 
   return (
     <div className="page-view active-view">
@@ -56,7 +69,7 @@ export default function ProjectsList({ projects = [], onNavigate }) {
               className="form-input"
               placeholder="Search projects..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               style={{ width: '100%', paddingLeft: '36px' }}
             />
             <svg
@@ -77,7 +90,7 @@ export default function ProjectsList({ projects = [], onNavigate }) {
             className="form-input"
             style={{ width: '160px' }}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="All">All Status</option>
             <option value="Completed">Completed</option>
@@ -99,54 +112,67 @@ export default function ProjectsList({ projects = [], onNavigate }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((proj, idx) => {
-                const statusColor = proj.status === 'Completed'
-                  ? { bg: '#ecfdf5', text: '#059669' }
-                  : proj.status === 'In Progress'
-                  ? { bg: '#eff6ff', text: '#2563eb' }
-                  : { bg: '#fef2f2', text: '#dc2626' };
+              {displayedProjects.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                    No projects found matching your search.
+                  </td>
+                </tr>
+              ) : (
+                displayedProjects.map((proj, idx) => {
+                  const statusColor = proj.status === 'Completed'
+                    ? { bg: '#ecfdf5', text: '#059669' }
+                    : proj.status === 'In Progress'
+                    ? { bg: '#eff6ff', text: '#2563eb' }
+                    : { bg: '#fef2f2', text: '#dc2626' };
 
-                return (
-                  <tr key={idx} style={{ cursor: 'pointer' }} onClick={() => onNavigate('pipeline')}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {proj.name}
-                    </td>
-                    <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                      {proj.tech}
-                    </td>
-                    <td>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        padding: '3px 10px',
-                        borderRadius: '12px',
-                        background: statusColor.bg,
-                        color: statusColor.text
-                      }}>
-                        {proj.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '100px', height: '6px', background: 'var(--border-color)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{
-                            width: `${proj.progress}%`,
-                            height: '100%',
-                            background: proj.status === 'Failed' ? '#dc2626' : '#10b981',
-                            borderRadius: '3px'
-                          }} />
-                        </div>
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                          {proj.progress}%
+                  return (
+                    <tr
+                      key={idx}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleRowClick(proj)}
+                      title={`Click to inspect ${proj.name} code diff`}
+                    >
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {proj.name}
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                        {proj.tech}
+                      </td>
+                      <td>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          background: statusColor.bg,
+                          color: statusColor.text
+                        }}>
+                          {proj.status}
                         </span>
-                      </div>
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                      {proj.updated}
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '100px', height: '6px', background: 'var(--border-color)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{
+                              width: `${proj.progress}%`,
+                              height: '100%',
+                              background: proj.status === 'Failed' ? '#dc2626' : '#10b981',
+                              borderRadius: '3px'
+                            }} />
+                          </div>
+                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                            {proj.progress}%
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                        {proj.updated}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -154,14 +180,32 @@ export default function ProjectsList({ projects = [], onNavigate }) {
         {/* Pagination Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            Showing 1 to {filtered.length} of {combinedProjects.length} projects
+            Showing {filtered.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + pageSize, filtered.length)} of {filtered.length} projects
           </span>
           <div style={{ display: 'flex', gap: '4px' }}>
-            <button className="pagination-btn" disabled={currentPage === 1}>&lt;</button>
-            <button className={`pagination-btn ${currentPage === 1 ? 'active' : ''}`} onClick={() => setCurrentPage(1)}>1</button>
-            <button className={`pagination-btn ${currentPage === 2 ? 'active' : ''}`} onClick={() => setCurrentPage(2)}>2</button>
-            <button className={`pagination-btn ${currentPage === 3 ? 'active' : ''}`} onClick={() => setCurrentPage(3)}>3</button>
-            <button className="pagination-btn">&gt;</button>
+            <button
+              className="pagination-btn"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            >
+              &lt;
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              className="pagination-btn"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            >
+              &gt;
+            </button>
           </div>
         </div>
       </div>
