@@ -1,6 +1,35 @@
 import React, { useState, useEffect } from 'react';
 
 export const SAMPLE_FILES = {
+  // --- Screen 6 Reference Match: products.asp -> products.py ---
+  'products.py': {
+    targetLanguage: 'Python (Flask)',
+    category: 'python',
+    originalTitle: 'Original (Classic ASP)',
+    modernizedTitle: 'Generated (Python Flask)',
+    original: `<%
+conn = Server.CreateObject("ADODB.Connection")
+conn.Open Application("connStr")
+sql = "SELECT * FROM Products"
+Set rs = conn.Execute(sql)
+do while not rs.EOF
+  Response.Write "<tr>"
+  Response.Write "<td>" & rs("Name") & "</td>"
+  rs.MoveNext
+loop
+%>`,
+    modernized: `from flask import render_template
+from db import get_connection
+
+@app.route('/products')
+def products():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM Products")
+    products = cur.fetchall()
+    return render_template('products.html', products=products)`
+  },
+
   // --- C# ASP.NET Core ---
   'Login.cshtml': {
     targetLanguage: 'C# (ASP.NET Core Razor Pages)',
@@ -612,16 +641,14 @@ export default function DiffViewer({ customFiles, targetTech }) {
       <div className="card-panel">
         <div className="diff-header-bar" style={{ flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
           <div>
-            <h3 className="card-panel-title" style={{ margin: 0 }}>Comparative Code Diff Viewer</h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Inspect side-by-side legacy code transformation into your chosen modernized target language.
-            </p>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Project: Inventory_System &gt;</div>
+            <h3 className="card-panel-title" style={{ margin: '2px 0 0 0' }}>Code Diff</h3>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             {/* Target Modernization Language Filter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Modern Target:</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Target:</span>
               <select
                 className="form-input filter-dropdown"
                 style={{ width: '230px' }}
