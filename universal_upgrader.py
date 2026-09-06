@@ -412,7 +412,7 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy
         db_log_event("Prompt Maker Agent", "info", f"Synthesizing execution prompt for {rel}...")
         maker_prompt = maker_template.replace("PROJECT_CONTEXT", project_context) \
                                      .replace("FILE_CONTEXT", f"{rel} ({lang})") \
-                                     .replace("TASK", tasks_text)
+                                     .replace("TASK", f"Target Architecture: {target_tech}\n\nTasks:\n{tasks_text}")
         maker_out = call_llm(maker_prompt)
         if maker_out and maker_out.strip().upper() == "NO UPGRADE NEEDED":
             dest_path = os.path.join(output_dir, rel)
@@ -428,7 +428,7 @@ def run_upgrade_pipeline(input_dir, output_dir, report_dir, project_name="Legacy
                                    .replace("RELATED_SNIPPETS", snippets) \
                                    .replace("FILE_NAME", rel) \
                                    .replace("CODE_CONTENT", code_content) \
-                                   .replace("PROMPT", maker_out)
+                                   .replace("PROMPT", f"Target Languages & Architecture:\n{target_tech}\n\nModernization Directives:\n{maker_out}")
         new_code = call_llm(exec_prompt)
 
         # 5. VALIDATOR AGENT (Interactive Feedback Loop)
