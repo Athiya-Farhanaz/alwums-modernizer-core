@@ -20,14 +20,14 @@ export default function PipelineTracker({ logs, currentStage, onDownload }) {
 
   return (
     <div className="page-view active-view">
-      <div className="pipeline-layout-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '24px' }}>
         {/* Left: Agent Pipeline Nodes */}
         <div className="card-panel">
           <div className="card-panel-header">
-            <h3 className="card-panel-title">6-Agent Pipeline Workflow</h3>
+            <h3 className="card-panel-title">6-Agent Pipeline Status</h3>
           </div>
           <div className="agent-pipeline-tree">
-            {stages.map((st, i) => {
+            {stages.map((st) => {
               const isCompleted = currentStage > st.num;
               const isInProgress = currentStage === st.num;
               const statusClass = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'pending';
@@ -38,10 +38,8 @@ export default function PipelineTracker({ logs, currentStage, onDownload }) {
                     {isCompleted ? '✓' : st.num}
                   </div>
                   <div className="agent-pipeline-details">
-                    <h5 style={{ margin: '0 0 2px 0' }}>{st.name}</h5>
-                    <span className="agent-pipeline-time" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {st.desc}
-                    </span>
+                    <h5>{st.name}</h5>
+                    <span className="agent-pipeline-time">{st.desc}</span>
                   </div>
                 </div>
               );
@@ -49,13 +47,13 @@ export default function PipelineTracker({ logs, currentStage, onDownload }) {
           </div>
         </div>
 
-        {/* Right: Execution Monitor & Live Terminal */}
+        {/* Right: Execution Details & Terminal Logs */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="card-panel">
             <div className="card-panel-header">
-              <h3 className="card-panel-title">Execution State</h3>
+              <h3 className="card-panel-title">Execution Details</h3>
               {currentStage >= 6 && onDownload && (
-                <button className="btn-primary" style={{ padding: '6px 14px', fontSize: '12px' }} onClick={onDownload}>
+                <button className="btn-primary" onClick={onDownload}>
                   Download Modernized ZIP
                 </button>
               )}
@@ -67,7 +65,7 @@ export default function PipelineTracker({ logs, currentStage, onDownload }) {
                   {stages[Math.min(currentStage - 1, 5)]?.name || 'Ready'}
                 </span>
               </div>
-              <div className="progress-bar-bg">
+              <div className="progress-bar-bg" style={{ height: '8px' }}>
                 <div
                   className="progress-bar-fill"
                   style={{ width: `${Math.min(Math.round((currentStage / 6) * 100), 100)}%` }}
@@ -78,14 +76,10 @@ export default function PipelineTracker({ logs, currentStage, onDownload }) {
 
           <div className="card-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div className="card-panel-header">
-              <h3 className="card-panel-title">Real-Time Agent Logs Console</h3>
-              <span style={{ fontSize: '11px', color: 'var(--color-success)', fontWeight: 600 }}>● LIVE</span>
+              <h3 className="card-panel-title">Live Terminal Output</h3>
+              <span style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600 }}>● Active Stream</span>
             </div>
-            <div
-              className="console-wrapper"
-              ref={consoleRef}
-              style={{ flex: 1, minHeight: '300px', maxHeight: '420px', overflowY: 'auto' }}
-            >
+            <div className="console-window" ref={consoleRef} style={{ height: '320px' }}>
               {logs.map((log, i) => (
                 <div key={i} className="console-line">
                   <span className="console-time">[{log.time || '12:00:00'}]</span>
@@ -100,7 +94,7 @@ export default function PipelineTracker({ logs, currentStage, onDownload }) {
                           ? 'var(--color-warning)'
                           : log.level === 'success'
                           ? 'var(--color-success)'
-                          : 'inherit',
+                          : 'var(--text-console)',
                     }}
                   >
                     {log.message}

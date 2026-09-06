@@ -3,86 +3,74 @@ import React from 'react';
 export default function Dashboard({ onNavigate, projects }) {
   return (
     <div className="page-view active-view">
-      {/* Tech Stack Banner */}
+      {/* Platform Banner */}
       <div style={{
+        background: 'var(--accent-gradient)',
+        color: '#ffffff',
+        padding: '18px 24px',
+        borderRadius: 'var(--radius-md)',
+        marginBottom: '24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: 'var(--accent-gradient)',
-        color: '#ffffff',
-        padding: '16px 24px',
-        borderRadius: 'var(--radius-md)',
-        marginBottom: '24px',
         boxShadow: 'var(--shadow-md)'
       }}>
         <div>
-          <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 700 }}>
+          <h3 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: 700, letterSpacing: '-0.3px' }}>
             ALWUMS Multi-Agent Modernization Platform
-          </h4>
+          </h3>
           <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>
-            Autonomous legacy modernization powered by a 6-agent pipeline with self-healing auto-repair.
+            Autonomous legacy modernization with 6 specialized agents and self-healing auto-repair.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['Python', 'Flask', 'React.js', 'MongoDB', 'Gemini AI'].map(tech => (
-            <span key={tech} style={{
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {['Python', 'Flask', 'React.js', 'MongoDB', 'Gemini AI'].map(t => (
+            <span key={t} style={{
               background: 'rgba(255, 255, 255, 0.2)',
-              padding: '4px 10px',
+              padding: '4px 12px',
               borderRadius: '20px',
               fontSize: '12px',
               fontWeight: 600,
               backdropFilter: 'blur(4px)'
             }}>
-              {tech}
+              {t}
             </span>
           ))}
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="metrics-row">
-        <div className="metric-card">
-          <div className="metric-header">
-            <span className="metric-title">Total Projects</span>
-            <div className="metric-icon">📁</div>
-          </div>
-          <div className="metric-value">12</div>
-          <span className="metric-change positive">+2 this week</span>
+      {/* 4 Metric Cards Grid */}
+      <div className="dashboard-grid">
+        <div className="card-panel metric-card">
+          <span className="metric-card-label">Total Projects</span>
+          <span className="metric-card-value">12</span>
+          <span className="metric-card-change up">+2 this week</span>
         </div>
 
-        <div className="metric-card">
-          <div className="metric-header">
-            <span className="metric-title">Completed Migrations</span>
-            <div className="metric-icon">✅</div>
-          </div>
-          <div className="metric-value">8</div>
-          <span className="metric-change positive">100% verified</span>
+        <div className="card-panel metric-card">
+          <span className="metric-card-label">Completed Migrations</span>
+          <span className="metric-card-value">8</span>
+          <span className="metric-card-change up">100% verified</span>
         </div>
 
-        <div className="metric-card">
-          <div className="metric-header">
-            <span className="metric-title">In Progress</span>
-            <div className="metric-icon">⚙️</div>
-          </div>
-          <div className="metric-value">3</div>
-          <span className="metric-change" style={{ color: 'var(--color-warning)' }}>Active runs</span>
+        <div className="card-panel metric-card">
+          <span className="metric-card-label">In Progress</span>
+          <span className="metric-card-value">3</span>
+          <span className="metric-card-change down">Active agents running</span>
         </div>
 
-        <div className="metric-card">
-          <div className="metric-header">
-            <span className="metric-title">Success Rate</span>
-            <div className="metric-icon">📈</div>
-          </div>
-          <div className="metric-value">92%</div>
-          <span className="metric-change positive">Self-healed 4 files</span>
+        <div className="card-panel metric-card">
+          <span className="metric-card-label">Success Rate</span>
+          <span className="metric-card-value">92%</span>
+          <span className="metric-card-change up">Self-healed 4 files</span>
         </div>
       </div>
 
-      {/* Pipeline Overview & Time Saved Split */}
+      {/* 6-Agent Pipeline Overview Horizontal Bar */}
       <div className="card-panel" style={{ marginBottom: '24px' }}>
         <div className="card-panel-header">
           <h3 className="card-panel-title">6-Agent Pipeline Overview</h3>
-          <button className="btn-primary" style={{ padding: '6px 14px', fontSize: '13px' }} onClick={() => onNavigate('upload')}>
+          <button className="btn-primary" onClick={() => onNavigate('upload')}>
             + New Modernization
           </button>
         </div>
@@ -103,57 +91,64 @@ export default function Dashboard({ onNavigate, projects }) {
         </div>
       </div>
 
+      {/* Split: Circular Gauge & Recent Projects Table */}
       <div className="dashboard-layout-split">
-        {/* Circular Gauge: 78% Time Saved */}
+        {/* Modernization Time Saved Gauge */}
         <div className="card-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="card-panel-header" style={{ width: '100%' }}>
             <h3 className="card-panel-title">Modernization Time Saved</h3>
           </div>
-          <div className="circular-gauge-container">
-            <svg className="circular-gauge-svg" viewBox="0 0 160 160">
-              <circle className="circular-gauge-bg" cx="80" cy="80" r="65"></circle>
-              <circle className="circular-gauge-bar" cx="80" cy="80" r="65" style={{ strokeDashoffset: 90 }}></circle>
-            </svg>
-            <div className="circular-gauge-text">
-              <span className="circular-gauge-percent">78%</span>
-              <span className="circular-gauge-label">Faster vs Manual</span>
+          <div className="chart-gauge-container">
+            <div className="circular-gauge">
+              <svg className="circular-gauge-svg" width="140" height="140" viewBox="0 0 140 140">
+                <circle className="circular-gauge-bg" cx="70" cy="70" r="54"></circle>
+                <circle
+                  className="circular-gauge-fill"
+                  cx="70"
+                  cy="70"
+                  r="54"
+                  style={{ strokeDasharray: 340, strokeDashoffset: 75 }}
+                ></circle>
+              </svg>
+              <div className="circular-gauge-text">
+                <span className="circular-gauge-percent">78%</span>
+                <span className="circular-gauge-label">Faster vs Manual</span>
+              </div>
             </div>
           </div>
           <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            Calculated across multi-file legacy refactoring benchmarks.
+            Benchmarks measured against manual legacy ASP/PHP refactoring engineer-hours.
           </p>
         </div>
 
-        {/* Recent Modernizations Table (from MongoDB) */}
+        {/* Recent Migrations in MongoDB */}
         <div className="card-panel">
           <div className="card-panel-header">
             <h3 className="card-panel-title">Recent Migrations (MongoDB)</h3>
-            <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: '12px' }} onClick={() => onNavigate('projects')}>
-              View All
-            </button>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Real-time database sync</span>
           </div>
           <div className="datatable-wrapper">
             <table className="datatable">
               <thead>
                 <tr>
-                  <th>Project</th>
-                  <th>Source Tech</th>
+                  <th>Project Name</th>
+                  <th>Legacy Stack</th>
                   <th>Status</th>
                   <th>Progress</th>
                 </tr>
               </thead>
               <tbody>
-                {projects.slice(0, 4).map((p, i) => (
-                  <tr key={i}>
-                    <td style={{ fontWeight: 600 }}>{p.name}</td>
-                    <td style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{p.tech}</td>
+                {projects.slice(0, 4).map((p, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{p.tech}</td>
                     <td>
-                      <span className={`status-pill status-${p.status}`}>
-                        {p.status.toUpperCase()}
+                      <span className={`status-pill ${p.status}`}>
+                        {p.status}
                       </span>
                     </td>
                     <td>
-                      <div className="progress-bar-bg" style={{ width: '80px', height: '6px' }}>
+                      <div className="progress-bar-bg" style={{ width: '90px' }}>
                         <div className="progress-bar-fill" style={{ width: `${p.progress}%` }}></div>
                       </div>
                     </td>

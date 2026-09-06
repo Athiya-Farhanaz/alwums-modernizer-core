@@ -40,53 +40,59 @@ export default function UploadWizard({ onStartPipeline }) {
 
   return (
     <div className="page-view active-view">
-      <div className="wizard-card">
-        {/* Step Indicator */}
+      <div className="card-panel" style={{ maxWidth: '850px', margin: '0 auto', padding: '36px' }}>
+        {/* Wizard Steps Header */}
         <div className="wizard-steps-header">
-          <div className={`wizard-step-node ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
-            <div className="wizard-step-circle">1</div>
-            <span className="wizard-step-title">Upload Project</span>
+          <div className={`wizard-step-indicator ${step === 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
+            <div className="wizard-step-number">{step > 1 ? '✓' : '1'}</div>
+            <span>Upload Project</span>
           </div>
-          <div className={`wizard-step-node ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
-            <div className="wizard-step-circle">2</div>
-            <span className="wizard-step-title">Configure Architecture</span>
+
+          <div className={`wizard-step-indicator ${step === 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
+            <div className="wizard-step-number">{step > 2 ? '✓' : '2'}</div>
+            <span>Configure Architecture</span>
           </div>
-          <div className={`wizard-step-node ${step === 3 ? 'active' : ''}`}>
-            <div className="wizard-step-circle">3</div>
-            <span className="wizard-step-title">Review & Execute</span>
+
+          <div className={`wizard-step-indicator ${step === 3 ? 'active' : ''}`}>
+            <div className="wizard-step-number">3</div>
+            <span>Review & Execute</span>
           </div>
         </div>
 
         {/* Step 1: Upload */}
         {step === 1 && (
           <div className="wizard-step-pane active">
-            <div className="dropzone-area" style={{ textAlign: 'center', padding: '48px 24px', border: '2px dashed var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: '48px', marginBottom: '12px' }}>📂</div>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>Select or Drag Legacy Web Application Folder</h4>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '20px' }}>
-                Supports Classic ASP (.asp, .inc), Legacy PHP (.php), HTML, and VBScript scripts.
-              </p>
-              <label className="btn-primary" style={{ cursor: 'pointer', display: 'inline-block' }}>
+            <label className="drag-drop-zone" style={{ display: 'block' }}>
+              <div className="upload-icon-wrapper">
+                <svg style={{ width: '32px', height: '32px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }} viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                </svg>
+              </div>
+              <h3>Select or Drag Legacy Web Application Folder</h3>
+              <p>Supports Classic ASP (.asp, .inc), Legacy PHP (.php), HTML, and VBScript files.</p>
+              <span className="btn-primary" style={{ cursor: 'pointer' }}>
                 Browse Folder
-                <input
-                  type="file"
-                  webkitdirectory="true"
-                  directory="true"
-                  multiple
-                  style={{ display: 'none' }}
-                  onChange={handleFolderSelect}
-                />
-              </label>
-            </div>
+              </span>
+              <input
+                type="file"
+                webkitdirectory="true"
+                directory="true"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleFolderSelect}
+              />
+            </label>
           </div>
         )}
 
         {/* Step 2: Configure */}
         {step === 2 && (
           <div className="wizard-step-pane active">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-              <div className="form-group">
-                <label>Project Name</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '28px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600 }}>
+                  Project Name
+                </label>
                 <input
                   type="text"
                   className="form-input"
@@ -95,8 +101,10 @@ export default function UploadWizard({ onStartPipeline }) {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Target Modernization Architecture</label>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600 }}>
+                  Target Architecture
+                </label>
                 <select
                   className="form-input"
                   value={targetTech}
@@ -117,8 +125,10 @@ export default function UploadWizard({ onStartPipeline }) {
                 </select>
               </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Custom Modernization Directives (Optional)</label>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600 }}>
+                  Custom Modernization Directives (Optional)
+                </label>
                 <textarea
                   className="form-input"
                   rows="4"
@@ -139,26 +149,33 @@ export default function UploadWizard({ onStartPipeline }) {
         {/* Step 3: Review */}
         {step === 3 && (
           <div className="wizard-step-pane active">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: '12px', fontSize: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '160px 1fr',
+                gap: '14px',
+                fontSize: '14px',
+                borderBottom: '1px solid var(--border-color)',
+                paddingBottom: '20px'
+              }}>
                 <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Project Name:</span>
                 <span style={{ fontWeight: 700 }}>{projectName}</span>
 
                 <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Scanned Files:</span>
-                <span>{files.length} file(s) ready</span>
+                <span>{files.length} file(s) ready for migration</span>
 
                 <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Target Stack:</span>
                 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{targetTech}</span>
 
-                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Pipeline:</span>
-                <span>6 Autonomous Agents (Discovery → Manager → Prompt Maker → Execution → Validator → Finalizer)</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Autonomous Agents:</span>
+                <span>Discovery → Manager → Prompt Maker → Execution → Validator → Finalizer</span>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <button className="btn-secondary" onClick={() => setStep(2)}>&lt; Back</button>
               <button className="btn-primary" onClick={handleStart}>
-                🚀 Launch Modernization Pipeline
+                🚀 Launch 6-Agent Modernization
               </button>
             </div>
           </div>

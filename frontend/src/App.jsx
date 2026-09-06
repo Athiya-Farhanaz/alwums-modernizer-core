@@ -38,7 +38,6 @@ export default function App() {
     setActiveTab('pipeline');
     setPipelineState({ stage: 1, active: true, downloadBlob: null });
 
-    // Stream stage transitions for real-time visual feedback
     const stageTimeline = [
       { s: 1, agent: 'Discovery Agent', msg: `Scanning project directory for ${projectName}...` },
       { s: 2, agent: 'Manager Agent', msg: 'Decomposing legacy code into modernization task checklist...' },
@@ -62,7 +61,6 @@ export default function App() {
       await new Promise(r => setTimeout(r, 1200));
     }
 
-    // Send actual ZIP to Flask backend
     try {
       const formData = new FormData();
       formData.append('project', zipBlob, `${projectName}.zip`);
@@ -105,67 +103,89 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Sidebar */}
+      {/* Sidebar Navigation */}
       <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="brand-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <div>
-            <h1 className="brand-title">ALWUMS</h1>
-            <span className="brand-badge">Multi-Agent AI</span>
+        <div className="logo-container">
+          <div className="logo-icon">A</div>
+          <div className="logo-text">
+            <h1>ALWUMS</h1>
+            <p>Multi-Agent AI</p>
           </div>
         </div>
 
-        <nav className="nav-menu">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-            { id: 'upload', label: 'Upgrade Wizard', icon: '⚡' },
-            { id: 'pipeline', label: 'Agent Pipeline', icon: '🤖' },
-            { id: 'diff', label: 'Diff Viewer', icon: '🔍' },
-            { id: 'logs', label: 'MongoDB Logs', icon: '📋' }
-          ].map(item => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(item.id)}
-              style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
+        <nav className="nav-list">
+          <div
+            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+            Dashboard
+          </div>
+
+          <div
+            className={`nav-item ${activeTab === 'upload' ? 'active' : ''}`}
+            onClick={() => setActiveTab('upload')}
+          >
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Upgrade Wizard
+          </div>
+
+          <div
+            className={`nav-item ${activeTab === 'pipeline' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pipeline')}
+          >
+            <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Agent Pipeline
+          </div>
+
+          <div
+            className={`nav-item ${activeTab === 'diff' ? 'active' : ''}`}
+            onClick={() => setActiveTab('diff')}
+          >
+            <svg viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6M12 2v20"/></svg>
+            Diff Viewer
+          </div>
+
+          <div
+            className={`nav-item ${activeTab === 'logs' ? 'active' : ''}`}
+            onClick={() => setActiveTab('logs')}
+          >
+            <svg viewBox="0 0 24 24"><path d="M12 20h9M3 20h6M3 4h18M3 12h18M3 16h18M3 8h18"/></svg>
+            MongoDB Logs
+          </div>
         </nav>
 
-        <div style={{ marginTop: 'auto', padding: '16px', borderTop: '1px solid var(--border-color)' }}>
-          <button
-            className="btn-secondary"
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            onClick={toggleTheme}
-          >
-            <span>{theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}</span>
+        <div className="sidebar-footer">
+          <div className="user-profile">
+            <div className="user-avatar">AI</div>
+            <div className="user-details">
+              <h4>System Pipeline</h4>
+              <p>6 Active Agents</p>
+            </div>
+          </div>
+          <button className="theme-toggle-btn" onClick={toggleTheme} title="Switch Theme">
+            {theme === 'light' ? '🌙' : '☀️'}
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content Viewport */}
       <main className="main-content">
-        <header className="top-header">
-          <div>
-            <h2 className="header-title" style={{ textTransform: 'capitalize' }}>
-              {activeTab.replace('-', ' ')}
+        <header className="main-header">
+          <div className="header-title-container">
+            <h2 style={{ textTransform: 'capitalize' }}>
+              {activeTab === 'dashboard' ? 'Overview Dashboard' : activeTab.replace('-', ' ')}
             </h2>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+          <div className="header-right">
+            <div className="server-status-pill">
+              <span className="server-status-dot online"></span>
               Backend: <strong>Flask</strong> • DB: <strong>MongoDB</strong> • Frontend: <strong>React</strong>
-            </span>
+            </div>
           </div>
         </header>
 
-        <div className="content-body">
+        <div className="view-viewport">
           {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} projects={projects} />}
           {activeTab === 'upload' && <UploadWizard onStartPipeline={handleStartPipeline} />}
           {activeTab === 'pipeline' && (

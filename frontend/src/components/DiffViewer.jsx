@@ -114,7 +114,7 @@ export default function DiffViewer({ customFiles }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Comparing File:</span>
             <select
-              className="form-input"
+              className="form-input filter-dropdown"
               style={{ width: '220px' }}
               value={selectedFile}
               onChange={(e) => setSelectedFile(e.target.value)}
@@ -126,27 +126,45 @@ export default function DiffViewer({ customFiles }) {
           </div>
         </div>
 
-        <div className="diff-grid">
-          {/* Original Panel */}
+        <div className="diff-container" style={{ height: '520px' }}>
+          {/* Original Source Panel */}
           <div className="diff-panel original-panel">
             <div className="diff-panel-title">
               <span>Original Source (Legacy ASP / PHP)</span>
-              <span className="diff-tag-deleted">REMOVED</span>
+              <span style={{ color: 'var(--color-danger)', fontSize: '11px', fontWeight: 700 }}>LEGACY</span>
             </div>
-            <pre className="diff-code-area" style={{ margin: 0, padding: '16px', overflowX: 'auto', fontSize: '12px' }}>
-              <code>{active.original}</code>
-            </pre>
+            <div style={{
+              flex: 1,
+              padding: '16px',
+              overflowY: 'auto',
+              backgroundColor: 'var(--bg-primary)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '12px',
+              lineHeight: 1.6,
+              whiteSpace: 'pre'
+            }}>
+              {active.original}
+            </div>
           </div>
 
-          {/* Modernized Panel */}
+          {/* Modernized Architecture Panel */}
           <div className="diff-panel upgraded-panel">
             <div className="diff-panel-title">
-              <span>Modernized Architecture (React.js + Flask / MongoDB)</span>
-              <span className="diff-tag-added">MODERNIZED</span>
+              <span>Modernized Code (React.js + Python Flask & MongoDB)</span>
+              <span style={{ color: 'var(--color-success)', fontSize: '11px', fontWeight: 700 }}>MODERNIZED</span>
             </div>
-            <pre className="diff-code-area" style={{ margin: 0, padding: '16px', overflowX: 'auto', fontSize: '12px' }}>
-              <code>{active.modernized}</code>
-            </pre>
+            <div style={{
+              flex: 1,
+              padding: '16px',
+              overflowY: 'auto',
+              backgroundColor: 'var(--bg-primary)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '12px',
+              lineHeight: 1.6,
+              whiteSpace: 'pre'
+            }}>
+              {active.modernized}
+            </div>
           </div>
         </div>
       </div>
