@@ -565,17 +565,6 @@ func LoginHandler(c *gin.Context) {
   }
 };
 
-const LANGUAGE_CATEGORIES = [
-  { id: 'all', label: 'All Target Languages' },
-  { id: 'csharp', label: 'C# (ASP.NET Core 8 / Razor)' },
-  { id: 'python', label: 'Python (Flask & FastAPI)' },
-  { id: 'react', label: 'React.js Frontend' },
-  { id: 'nodejs', label: 'TypeScript / Node.js Express' },
-  { id: 'java', label: 'Java (Spring Boot 3)' },
-  { id: 'php', label: 'PHP 8.3 (Modern Laravel)' },
-  { id: 'golang', label: 'Go (Golang Gin)' }
-];
-
 export default function DiffViewer({ customFiles, targetTech, projectName = 'Modernization Project' }) {
   const hasCustom = customFiles && Object.keys(customFiles).length > 0;
   const allFiles = { ...(hasCustom ? customFiles : {}), ...SAMPLE_FILES };

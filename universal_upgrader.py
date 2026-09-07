@@ -541,7 +541,7 @@ def write_report_html(report, report_path):
         iss = "<br>".join([html.escape(str(x)) for x in r["issues"]]) if r["issues"] else "None"
         file_name = html.escape(str(r['file']))
         rows.append(f"<tr><td>{file_name}</td><td>{st}</td><td>{iss}</td><td>{r['time']}s</td></tr>")
-    html = f"""<!doctype html>
+    report_html = f"""<!doctype html>
 <html>
 <head><meta charset="utf-8"><title>ALWUMS Modernization Report</title>
 <style>body{{font-family:sans-serif;padding:24px;background:#f8fafc;color:#1e293b;}}table{{width:100%;border-collapse:collapse;margin-top:16px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);}}th,td{{padding:12px;text-align:left;border-bottom:1px solid #e2e8f0;}}th{{background:#0f172a;color:#fff;}}</style>
@@ -555,7 +555,7 @@ def write_report_html(report, report_path):
 </table>
 </body>
 </html>"""
-    write_file(report_path, html)
+    write_file(report_path, report_html)
 
 def create_output_zip(output_dir, report_path):
     zip_path = output_dir + ".zip"
